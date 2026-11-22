@@ -2122,6 +2122,7 @@ part('fast',()=>{
 })();
 </script>
 
+
 <!--ZXP-->
 <style id="zxpcss">
 #pv{height:42dvh!important}
@@ -2144,6 +2145,17 @@ html.zxv .clip[data-snd].sel,html.zxa .clip.sel:not([data-snd]){border-color:tra
 #zxd.on{display:flex}
 #zxd button{min-height:40px;padding:0 14px;border-radius:999px;font-weight:600}
 #zxd button:not([data-d=x]){background:linear-gradient(#ff5d73,#c8283f);color:#fff}
+#z3{position:fixed;inset:0;z-index:120;background:#050914;display:none;flex-direction:column;padding-top:env(safe-area-inset-top,0px)}
+#z3.on{display:flex}
+#z3 .tb{display:flex;gap:8px;padding:8px}
+#z3 .tb button{flex:1;min-height:46px;border-radius:14px;font-weight:600}
+#z3s{flex:0 0 40%;min-height:0;display:flex;align-items:center;justify-content:center;background:#000}
+#z3s canvas{touch-action:none;display:block}
+#z3p{flex:1;overflow:auto;padding:8px 12px 24px}
+#z3p label{display:flex;justify-content:space-between;align-items:center;gap:8px;font-size:13px;padding:4px 0}
+#z3p label input[type=range]{width:60%}
+#z3p .ch{flex-wrap:wrap}
+#z3p p{font-size:12px;color:var(--m);margin:6px 0}
 </style>
 <script id="zxpjs">
 (function(){
@@ -2231,6 +2243,12 @@ part('ui',()=>{
   ap:v=>{const k=ak();if(!k)return;push();k.ap=+v;if(+v)delete k.pk;R();ui()},
   pk:v=>{const k=ak();if(!k)return toast('Tap an audio or video clip first');push();const f=Math.max(0,ph-k.s);k.pk=[...(k.pk||[]).filter(a=>a.f!=f),{f,p:+v}].sort((a,b)=>a.f-b.f);k.ap=0;R();ui();toast('Pan point at '+tc(f))},
   pkc:()=>{const k=ak();if(!k)return;push();delete k.pk;R();ui()},
+  ms:()=>{window.zxA=ph;toast('Start at '+tc(ph))},me:()=>{window.zxB=ph;toast('End at '+tc(ph))},
+  sx:v=>{const k=ak(),a=window.zxA,b=window.zxB;if(!k)return toast('Tap an audio or video clip first');
+   if(+v==0&&(a==null||b==null)){push();k.afx=0;R();return}
+   if(a==null||b==null||a>=b||a<=k.s||b>=k.s+k.d)return toast('Set start and end inside the clip');
+   push();const sp=(c,f)=>{const d1=f-c.s,n={...c,id:uid++,s:f,i:c.i+Math.round(d1*SP(c)),d:c.d-d1};delete n.ti;c.d=d1;delete c.to;S.clips.push(n);return n};
+   const m=sp(k,a);sp(m,b);m.afx=+v;sel=m.id;R();ui();toast('Effect added to that part')},
   pm:v=>{const k=ak();if(!k)return;push();k.pg=+v;R();ui()},
   fd:v=>{const k=ak();if(!k)return toast('Tap an audio or video clip first');push();const d=+v*FPS;if(d){k.ti={t:1,d};k.to={t:1,d}}else{delete k.ti;delete k.to}R();ui()}};
  function ui(){if(!A.classList.contains('on'))return;
@@ -2252,7 +2270,7 @@ part('ui',()=>{
    if(!k)h+='<p>Tap an audio or video clip first.</p>';
    else h+='<div class=zh>Auto pan</div><div class=ch>'+[['Off',0],['Smooth L-R',1],['Hard switch',2]].map(a=>B(a[0],'ap',a[1],(k.ap|0)==a[1])).join('')+'</div>'+RG('Speed (Hz)','apf',.05,2,.01,k.apf??.25,'c')+RG('Depth','apd',0,1,.01,k.apd??1,'c')
     +'<div class=zh>Pan at playhead (choose when it switches)</div><div class=ch>'+B('Left','pk',-1)+B('Centre','pk',0)+B('Right','pk',1)+B('Clear ('+(k.pk||[]).length+')','pkc',0)+'</div><div class=ch>'+B('Jump','pm',0,!k.pg)+B('Glide','pm',1,!!k.pg)+'</div>'
-    +'<div class=zh>Fade in and out</div><div class=ch>'+[0,1,2,3].map(s=>B(s?s+'s':'None','fd',s)).join('')+'</div><p>Use headphones to hear left and right. Auto-pan and visualizer export in real time.</p>'}
+    +'<div class=zh>Fade in and out</div><div class=ch>'+[0,1,2,3].map(s=>B(s?s+'s':'None','fd',s)).join('')+'</div><div class=zh>Effect on one part</div><div class=ch>'+B('Start here','ms',0)+B('End here','me',0)+'</div><div class=ch>'+[['Echo',6],['Big echo',12],['Cave',7],['Underwater',13],['Walkie',9],['Normal',0]].map(a=>B(a[0],'sx',a[1])).join('')+'</div><p>Put the playhead at the start, tap Start here. Move to the end, tap End here. Then tap an effect. Only that part is cut out and changed.</p><p>Use headphones to hear left and right. Auto-pan and visualizer export in real time.</p>'}
   A.innerHTML=h;$q('#zxc').onclick=()=>A.classList.remove('on');
   A.querySelectorAll('[data-tb]').forEach(b=>b.onclick=()=>{tab=b.dataset.tb;ui()});
   A.querySelectorAll('[data-a]').forEach(b=>b.onclick=()=>ACT[b.dataset.a](b.dataset.v));
@@ -2307,6 +2325,74 @@ part('exp',()=>{const _e=exportVid;
   $q('#zxe2').onclick=()=>{cl();_e()};
   $q('#zxe3').onclick=async()=>{cl();toast('Rendering audio...');stop();try{const b=wav(await mixd()),u=URL.createObjectURL(b),n=(S.name||'audio').split(' ').join('_')+'.wav';
    xov('<div class=xb><b>Audio ready</b><audio src="'+u+'" controls style="width:100%"></audio><p>'+esc(n)+' \u00b7 '+(b.size/1e6).toFixed(1)+' MB</p><div class=hd><a class="btn acc" href="'+u+'" download="'+esc(n)+'">Save audio</a><button id=zxe5>Close</button></div></div>');$q('#zxe5').onclick=cl}catch(e){toast('Audio render failed')}}}});
+
+/* 3D Studio: its own screen, real 3D (three.js from cdnjs, needs internet once) */
+part('s3d',()=>{
+ let ov,cv,rn,scn,cam,rc,sl=null,ob=[],R3=16/9,dur=6,pl=0,pt0=0,sh=[],C={th:.6,ph:.5,r:9},sk='#9ec9ff',ptr=new Map,dg=null,rcd=0,ini=0;
+ const ld=()=>window.THREE?Promise.resolve():new Promise((a,b)=>{const s=document.createElement('script');s.src='https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js';s.onload=a;s.onerror=b;document.head.appendChild(s)});
+ const sm=(a,b,u)=>{u=u*u*(3-2*u);return a+(b-a)*u};
+ function build(t){const G=THREE,g=new G.Group(),A=(geo,c,y,tint,x,z,n)=>{const m=new G.Mesh(geo,new G.MeshStandardMaterial({color:c,roughness:.55}));m.position.set(x||0,y,z||0);m.userData.tint=tint;if(n)m.name=n;g.add(m);return m};
+  if(t=='cube')A(new G.BoxGeometry(1.6,1.6,1.6),'#4aa3ff',.8,1);
+  else if(t=='sphere')A(new G.SphereGeometry(.9,32,24),'#ff5d73',.9,1);
+  else if(t=='pyramid')A(new G.ConeGeometry(1.1,1.8,4),'#ffd400',.9,1);
+  else if(t=='cylinder')A(new G.CylinderGeometry(.7,.7,1.8,32),'#22e06b',.9,1);
+  else if(t=='torus')A(new G.TorusGeometry(.8,.3,16,48),'#bf5af2',1.1,1);
+  else if(t=='tree'){A(new G.CylinderGeometry(.18,.25,1.2,10),'#7a4a2a',.6,0);A(new G.ConeGeometry(.9,1.8,10),'#2fa84f',2.1,1)}
+  else if(t=='grass'){for(let i=0;i<16;i++){const h=.7+Math.random()*.5,m=A(new G.ConeGeometry(.07,h,4),'#3fbf4f',h/2,1,(Math.random()-.5)*1.6,(Math.random()-.5)*1.6);m.rotation.z=(Math.random()-.5)*.4}}
+  else{A(new G.CylinderGeometry(.32,.32,1,16),'#4aa3ff',1.2,1);A(new G.SphereGeometry(.3,16,12),'#f1c9a5',1.95,0);
+   [-1,1].forEach(s=>{A(new G.CylinderGeometry(.09,.09,.8,8).translate(0,-.35,0),'#f1c9a5',1.6,0,s*.45,0,'arm');A(new G.CylinderGeometry(.12,.12,.9,8).translate(0,-.45,0),'#2b3a67',.9,0,s*.17,0,'leg')})}
+  return g}
+ function add(t){const g=build(t);g.userData={t,an:'',sc:1,ry:0};g.position.set(((ob.length%5)-2)*1.8,0,0);g.userData.p=g.position.clone();scn.add(g);ob.push(g);sl=g;rd()}
+ function ani(t){ob.forEach(g=>{const u=g.userData,p=u.p;g.position.copy(p);g.rotation.y=u.ry||0;g.scale.setScalar(u.sc||1);
+  if(pl&&u.an){const s=u.sc||1;if(u.an=='spin')g.rotation.y+=t*2;else if(u.an=='bounce')g.position.y+=Math.abs(Math.sin(t*4))*1.5;else if(u.an=='float')g.position.y+=1+Math.sin(t*2)*.4;
+   else if(u.an=='grow')g.scale.setScalar(s*(1+.4*Math.sin(t*3)));
+   else if(u.an=='walk'){g.position.x+=Math.sin(t*1.2)*3;g.rotation.y+=Math.cos(t*1.2)>0?1.57:-1.57;g.children.forEach(c=>{if(c.name)c.rotation.x=Math.sin(t*6)*.7*(c.position.x>0?1:-1)})}}
+  else g.children.forEach(c=>{if(c.name)c.rotation.x=0})})}
+ function cm(t){let c=C;if(pl&&sh.length>1){const n=sh.length-1,f=Math.min(.9999,t/dur)*n,i=Math.floor(f),u=f-i,a=sh[i],b=sh[i+1];c={th:sm(a.th,b.th,u),ph:sm(a.ph,b.ph,u),r:sm(a.r,b.r,u)}}
+  cam.position.set(c.r*Math.sin(c.th)*Math.cos(c.ph),1+c.r*Math.sin(c.ph),c.r*Math.cos(c.th)*Math.cos(c.ph));cam.lookAt(0,1,0)}
+ function lp(){if(!ov.classList.contains('on'))return;const t=pl?(performance.now()-pt0)/1000:0;if(pl&&t>=dur){pl=0;if(rcd)rcd.stop();rd()}ani(t);cm(pl?t:0);rn.render(scn,cam);requestAnimationFrame(lp)}
+ function rs(){const s=$q('#z3s'),w=Math.min(s.clientWidth,s.clientHeight*R3),W=R3>=1?1280:Math.round(720*R3),H=R3>=1?Math.round(1280/R3):1280;
+  rn.setSize(W,H,false);cam.aspect=R3;cam.updateProjectionMatrix();cv.style.width=w+'px';cv.style.height=(w/R3)+'px'}
+ const ray=e=>{const b=cv.getBoundingClientRect();rc.setFromCamera(new THREE.Vector2((e.clientX-b.left)/b.width*2-1,-((e.clientY-b.top)/b.height)*2+1),cam)};
+ const pick=e=>{ray(e);const h=rc.intersectObjects(ob,true)[0];if(!h)return null;let o=h.object;while(o&&!ob.includes(o))o=o.parent;return o};
+ const gnd=e=>{ray(e);const p=new THREE.Vector3();return rc.ray.intersectPlane(new THREE.Plane(new THREE.Vector3(0,1,0),0),p)?p:null};
+ const RG=(l,k,mn,mx,st,v)=>'<label>'+l+'<input type=range data-k='+k+' min='+mn+' max='+mx+' step='+st+' value='+v+'></label>';
+ const B=(l,a,v,on)=>'<button data-a="'+a+'" data-v="'+v+'"'+(on?' class=on':'')+'>'+l+'</button>';
+ const AC={add:t=>add(t),an:v=>{sl.userData.an=v=='none'?'':v;rd()},
+  del:()=>{scn.remove(sl);ob.splice(ob.indexOf(sl),1);sl=null;rd()},
+  dup:()=>{const c=sl.clone(true);c.traverse(m=>{if(m.material)m.material=m.material.clone()});c.userData={...sl.userData,p:sl.userData.p.clone()};c.userData.p.x+=1.5;scn.add(c);ob.push(c);sl=c;rd()},
+  cam:v=>{const a=v.split(',');C.th=+a[0];C.ph=+a[1]},shot:()=>{sh.push({...C});rd()},shc:()=>{sh=[];rd()},rt:v=>{R3=+v;rs();rd()},
+  play:()=>{pl=pl?0:1;pt0=performance.now();rd()}};
+ function rd(){const P=$q('#z3p'),u=sl&&sl.userData;
+  P.innerHTML='<div class=zh>Add object</div><div class=ch>'+['cube','sphere','pyramid','cylinder','torus','tree','grass','person'].map(t=>B(t,'add',t)).join('')+'</div>'
+  +(sl?'<div class=zh>Selected: '+u.t+'</div>'+RG('Size','sc',.3,3,.05,u.sc)+RG('Turn','ry',-3.14,3.14,.05,u.ry||0)+RG('Height','py',0,4,.05,u.p.y)+'<label>Colour<input type=color data-k=col value=#4aa3ff></label><div class=ch>'+['none','spin','bounce','float','walk','grow'].map(a=>B(a,'an',a,(u.an||'none')==a)).join('')+'</div><div class=ch>'+B('Duplicate','dup',0)+B('Delete','del',0)+'</div>'
+   :'<p>Tap an object to edit it. Drag it to move. Drag empty space to turn the camera. Pinch to zoom.</p>')
+  +'<div class=zh>Camera</div><div class=ch>'+[['Front',0,.25],['Side',1.57,.25],['Top',0,1.45],['3/4',.6,.5]].map(a=>B(a[0],'cam',a[1]+','+a[2])).join('')+'</div><div class=ch>'+B('+ Add shot ('+sh.length+')','shot',0)+B('Clear shots','shc',0)+'</div><p>Move the camera, tap Add shot. With 2 or more shots the camera flies between them when you Play.</p>'
+  +'<div class=zh>Scene</div><div class=ch>'+[['16:9',16/9],['9:16',9/16],['1:1',1],['4:5',.8],['21:9',21/9]].map(a=>B(a[0],'rt',a[1],Math.abs(R3-a[1])<.01)).join('')+'</div>'+RG('Length (sec)','dur',2,20,1,dur)+'<label>Sky<input type=color data-k=sky value='+sk+'></label>';
+  $q('#z3pl').textContent=pl?'Stop':'Play';
+  P.querySelectorAll('[data-a]').forEach(b=>b.onclick=()=>AC[b.dataset.a](b.dataset.v));
+  P.querySelectorAll('[data-k]').forEach(r=>r.oninput=()=>{const k=r.dataset.k,v=r.type=='color'?r.value:+r.value;
+   if(k=='dur')dur=v;else if(k=='sky'){sk=v;scn.background=new THREE.Color(v)}else if(sl){if(k=='sc')sl.userData.sc=v;else if(k=='ry')sl.userData.ry=v;else if(k=='py')sl.userData.p.y=v;else if(k=='col')sl.traverse(m=>{if(m.userData&&m.userData.tint)m.material.color.set(v)})}})}
+ async function toTl(){if(rcd)return;const mt=['video/mp4;codecs=avc1.42E01E','video/webm;codecs=vp9','video/webm'].find(t=>MediaRecorder.isTypeSupported(t));if(!mt)return toast('Recording not supported here');
+  const ch=[],r=new MediaRecorder(cv.captureStream(30),{mimeType:mt,videoBitsPerSecond:12e6});rcd=r;r.ondataavailable=e=>{if(e.data.size)ch.push(e.data)};
+  r.onstop=async()=>{rcd=0;const bl=new Blob(ch,{type:mt.split(';')[0]}),f=new File([bl],'3D scene '+Date.now()+(mt.includes('mp4')?'.mp4':'.webm'),{type:bl.type}),id=f.name+'_'+f.size,el=document.createElement('video');
+   el.src=URL.createObjectURL(f);el.preload='auto';el.playsInline=true;el.onseeked=R;await new Promise(a=>{el.onloadedmetadata=a;el.onerror=a;setTimeout(a,6000)});
+   dbPut({id:'m_'+id,blob:f});E[id]=el;BL[id]=f;S.media[id]={name:f.name,type:'video',dur:Math.round(dur*FPS)};wire(id);addClip(id);bin();ov.classList.remove('on');toast('3D scene added to timeline')};
+  r.start(500);pl=1;pt0=performance.now();toast('Recording 3D scene...')}
+ async function open(){if(!ov){ov=document.createElement('div');ov.id='z3';ov.innerHTML='<div class=tb><button id=z3b>Back</button><button id=z3pl>Play</button><button class=acc id=z3a>Add to timeline</button></div><div id=z3s><canvas></canvas></div><div id=z3p></div>';document.body.appendChild(ov);cv=ov.querySelector('canvas')}
+  ov.classList.add('on');await ld().catch(()=>0);if(!window.THREE){toast('3D needs internet to load');ov.classList.remove('on');return}
+  if(!ini){ini=1;rn=new THREE.WebGLRenderer({canvas:cv,antialias:true,preserveDrawingBuffer:true});scn=new THREE.Scene();scn.background=new THREE.Color(sk);cam=new THREE.PerspectiveCamera(50,R3,.1,100);rc=new THREE.Raycaster();
+   scn.add(new THREE.HemisphereLight('#ffffff','#556677',.9));const d=new THREE.DirectionalLight('#ffffff',.8);d.position.set(5,8,4);scn.add(d);
+   const gm=new THREE.Mesh(new THREE.CircleGeometry(14,48),new THREE.MeshStandardMaterial({color:'#6b8f5e',roughness:1}));gm.rotation.x=-Math.PI/2;scn.add(gm);
+   $q('#z3b').onclick=()=>{pl=0;ov.classList.remove('on')};$q('#z3pl').onclick=()=>AC.play();$q('#z3a').onclick=toTl;
+   cv.onpointerdown=e=>{cv.setPointerCapture(e.pointerId);ptr.set(e.pointerId,[e.clientX,e.clientY]);if(ptr.size==1){const h=pick(e);dg=h?{g:h}:{o:1};if(h&&h!==sl){sl=h;rd()}}};
+   cv.onpointermove=e=>{const p=ptr.get(e.pointerId);if(!p)return;const dx=e.clientX-p[0],dy=e.clientY-p[1];
+    if(ptr.size==2){const o=[...ptr.values()],d0=Math.hypot(o[0][0]-o[1][0],o[0][1]-o[1][1]);ptr.set(e.pointerId,[e.clientX,e.clientY]);const n=[...ptr.values()],d1=Math.hypot(n[0][0]-n[1][0],n[0][1]-n[1][1]);C.r=Math.max(3,Math.min(30,C.r*d0/(d1||1)));return}
+    ptr.set(e.pointerId,[e.clientX,e.clientY]);if(dg&&dg.g){const q=gnd(e);if(q){dg.g.userData.p.x=q.x;dg.g.userData.p.z=q.z}}else if(dg){C.th-=dx*.008;C.ph=Math.max(.05,Math.min(1.5,C.ph+dy*.008))}};
+   cv.onpointerup=cv.onpointercancel=e=>{ptr.delete(e.pointerId);dg=null};addEventListener('resize',()=>{if(ov.classList.contains('on'))rs()});add('cube')}
+  rs();rd();lp()}
+ const sub=$q('.sub'),grp=$q('.grp'),b=document.createElement('button');b.id='zx3d';b.dataset.g=3;b.innerHTML=IC('film')+'<span>3D Studio</span>';b.style.display='none';b.onclick=open;sub.appendChild(b);
+ new MutationObserver(()=>{const i=[...grp.children].findIndex(x=>x.classList.contains('act'));b.style.display=i===3?'':'none'}).observe(grp,{subtree:true,attributes:true,attributeFilter:['class']})});
 })();
 </script>
 <!--/ZXP-->
