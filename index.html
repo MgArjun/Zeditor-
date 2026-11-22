@@ -2121,4 +2121,145 @@ part('fast',()=>{
   if(!ok)return _e()}});
 })();
 </script>
+<!--ZXP-->
+<style id="zxpcss">
+#pv{height:42dvh!important}
+@media (orientation:landscape) and (max-height:520px){#pv{height:50dvh!important}}
+.tr{height:60px!important}
+.tr .ib{width:42px!important;min-width:38px!important}
+.tr .ib svg{width:24px;height:24px}
+#pp{width:54px!important;height:54px!important;min-width:54px!important;min-height:54px!important}
+#tc{width:104px!important;font-size:13px!important}
+#tl .row{height:38px}
+#tl .clip{top:4px;height:30px;line-height:20px;font-size:12px}
+.bar button{min-height:60px!important;font-size:11.5px!important}
+.bar button svg,.grp button svg{width:25px!important;height:25px!important}
+#zxp .ch{flex-wrap:wrap}
+#zxp p{font-size:12px;color:var(--m);margin:6px 0}
+#zxp label span{display:flex;gap:6px;align-items:center}
+</style>
+<script id="zxpjs">
+(function(){
+const $q=s=>document.querySelector(s),part=(n,f)=>{try{f()}catch(e){console.error('zxp '+n,e)}};
+let tab='text',FB=null,ls=null;
+const tk=()=>{const k=selClip();return k&&k.tx&&!k.tx.kind?k:null};
+const t3=()=>{const k=selClip();return k&&k.tx&&(k.tx.kind=='c3'||k.tx.kind=='viz')?k:null};
+const mk=()=>{const k=selClip();return k&&k.fx==null&&!k.tx&&MT(k)!='audio'?k:null};
+const ak=()=>{const k=selClip();return k&&k.fx==null&&!k.tx&&MT(k)!='image'?k:null};
+const rgb=h=>{const n=parseInt((h||'#4aa3ff').slice(1,7),16);return[n>>16&255,n>>8&255,n&255]};
+const CU=[[[-1,-1,-1],[1,-1,-1],[1,1,-1],[-1,1,-1],[-1,-1,1],[1,-1,1],[1,1,1],[-1,1,1]],[[0,1,2,3],[4,5,6,7],[0,1,5,4],[2,3,7,6],[0,3,7,4],[1,2,6,5]]];
+const PY=[[[-1,1,-1],[1,1,-1],[1,1,1],[-1,1,1],[0,-1.3,0]],[[0,1,2,3],[0,1,4],[1,2,4],[2,3,4],[3,0,4]]];
+
+/* text FX: bend, 3D depth, gradient */
+function ct(x,k){const t=k.tx,lf=ph-k.s,rem=k.s+k.d-ph,ad=t.ad||12,a=Math.max(0,Math.min(1,lf/ad,rem/ad))*(t.op??1);
+ x.save();x.globalAlpha=a;x.translate(1280*t.x,720*t.y);x.rotate((t.r||0)*Math.PI/180);
+ x.font=(t.it?'italic ':'')+(t.w||700)+' '+t.sz+'px "'+t.f+'",sans-serif';x.textBaseline='middle';x.textAlign='center';x.lineJoin='round';
+ const L=(t.t||'').split('\n'),lh=t.sz*1.2,y0=-(L.length-1)*lh/2,b=t.bend||0;
+ let fill=t.c;if(t.gr){fill=x.createLinearGradient(0,-t.sz*.6,0,t.sz*.6);fill.addColorStop(0,t.c);fill.addColorStop(1,t.c2||'#ff3b5c')}
+ const dl=(s,y,ox,oy,col,st)=>{
+  if(Math.abs(b)<.02){if(st){x.lineWidth=st*2;x.strokeStyle=t.st;x.strokeText(s,ox,y+oy)}x.fillStyle=col;x.fillText(s,ox,y+oy);return}
+  const ch=[...s],w=ch.map(c=>x.measureText(c).width),W=w.reduce((p,c)=>p+c,0)||1,R=W/(Math.abs(b)*Math.PI),sg=b>0?1:-1;let p=-W/2;
+  ch.forEach((c,i)=>{const th=(p+w[i]/2)/R;p+=w[i];x.save();x.translate(ox+R*Math.sin(th),y+oy+sg*R*(1-Math.cos(th)));x.rotate(sg*th);
+   if(st){x.lineWidth=st*2;x.strokeStyle=t.st;x.strokeText(c,0,0)}x.fillStyle=col;x.fillText(c,0,0);x.restore()})};
+ L.forEach((s,i)=>{const y=y0+i*lh;x.shadowColor='transparent';
+  for(let d=t.dp|0;d>0;d--)dl(s,y,d*.7,d*.7,t.dc||'#1d2b64',0);
+  if(t.sh){x.shadowColor='#000a';x.shadowBlur=t.sh*10;x.shadowOffsetY=t.sh*3}
+  dl(s,y,0,0,fill,t.sw);x.shadowColor='transparent'});
+ x.restore()}
+
+/* 3D shapes + audio visualizer */
+function m3(x,k){const t=k.tx,lf=ph-k.s,rem=k.s+k.d-ph,a=Math.max(0,Math.min(1,lf/10,rem/10))*(t.op??1),z=t.sz||240;
+ x.save();x.globalAlpha=a;x.translate(1280*t.x,720*t.y);
+ if(t.kind=='viz'){const n=t.shape=='ring'?72:36;if(AN){FB=FB||new Uint8Array(AN.frequencyBinCount);AN.getByteFrequencyData(FB)}x.fillStyle=t.c;
+  for(let i=0;i<n;i++){const v=FB?FB[Math.floor(i/n*FB.length*.55)]/255:0,h=4+v*z*.8;
+   if(t.shape=='ring'){x.save();x.rotate(i/n*6.2832);x.fillRect(z*.5,-3,h,6);x.restore()}else{const w=z*3/n;x.fillRect(-z*1.5+i*w,-h/2,w*.7,h)}}}
+ else{const sp=(lf/FPS)*(t.sp3??1)*Math.PI,tl=t.tl3??.5,c0=rgb(t.c);
+  if(t.shape=='sphere'){const g=x.createRadialGradient(-z*.12,-z*.15,z*.04,0,0,z*.5);g.addColorStop(0,'#fff');g.addColorStop(.3,t.c);g.addColorStop(1,'#000');
+   x.fillStyle=g;x.beginPath();x.arc(0,0,z*.5,0,6.2832);x.fill();x.strokeStyle='#ffffff66';x.lineWidth=3;x.beginPath();x.ellipse(0,0,Math.abs(Math.cos(sp))*z*.5,z*.5,0,0,6.2832);x.stroke()}
+  else{const M=t.shape=='pyramid'?PY:CU,cy=Math.cos(sp),sy=Math.sin(sp),cx=Math.cos(tl),sx=Math.sin(tl),s=z*.3;
+   const V=M[0].map(([X,Y,Z])=>{const a=X*cy+Z*sy,b=Z*cy-X*sy;return[a,Y*cx-b*sx,Y*sx+b*cx]}),P=V.map(([a,y,q])=>{const f=4/(4+q);return[a*f*s,y*f*s]});
+   M[1].map(F=>{const q=F.map(i=>V[i]),u=[0,1,2].map(j=>q[1][j]-q[0][j]),w=[0,1,2].map(j=>q[2][j]-q[0][j]),n=[u[1]*w[2]-u[2]*w[1],u[2]*w[0]-u[0]*w[2],u[0]*w[1]-u[1]*w[0]],l=Math.hypot(...n)||1;
+    return{F,z:q.reduce((p,v)=>p+v[2],0)/q.length,sh:.3+.7*Math.abs((n[0]*-.4+n[1]*-.6+n[2]*-.7)/l)}}).sort((p,q)=>q.z-p.z).forEach(o=>{
+    x.fillStyle='rgb('+c0.map(v=>Math.round(v*o.sh))+')';x.strokeStyle='#0006';x.lineWidth=2;x.beginPath();
+    o.F.forEach((i,j)=>j?x.lineTo(P[i][0],P[i][1]):x.moveTo(P[i][0],P[i][1]));x.closePath();x.fill();x.stroke()})}}
+ x.restore()}
+part('draw',()=>{
+ const _td=txDraw;txDraw=function(x,k){const t=k.tx;if(t.kind=='c3'||t.kind=='viz')return m3(x,k);if(!t.kind&&(t.bend||t.dp||t.gr))return ct(x,k);return _td(x,k)};
+ /* image / video extra motion */
+ const _dt=drawT;drawT=function(x,c,k,s,X,Y,W,H){const m=k.m2;if(!m)return _dt(x,c,k,s,X,Y,W,H);
+  const t=(ph-k.s)/FPS,p=Math.min(1,Math.max(0,(ph-k.s)/Math.max(1,k.d))),I=k.m2i??1;let sx=1,sk=0,sc=1,ty=0,tx=0,r=0;
+  if(m=='kb'){sc=1+.25*I*p;tx=-70*I*p}
+  else if(m=='spin'){const q=Math.cos(t*2.2*I);sx=(q<0?-1:1)*Math.max(.03,Math.abs(q))}
+  else if(m=='tilt'){const a=Math.sin(t*1.6*I);sx=1-.1*Math.abs(a)*I;sk=.12*a*I;sc=1.05}
+  else if(m=='swing')r=Math.sin(t*3*I)*.14*I;
+  else if(m=='float'){ty=Math.sin(t*2*I)*20*I;r=Math.sin(t*1.3*I)*.03}
+  else if(m=='beat')sc=1+.08*I*Math.pow(Math.max(0,Math.sin(t*8)),2);
+  else if(m=='shk'){tx=Math.sin(t*61)*8*I;ty=Math.cos(t*53)*8*I}
+  x.save();x.translate(c.width/2+tx,c.height/2+ty);x.rotate(r);x.transform(sx*sc,0,sk*sc,sc,0,0);x.translate(-c.width/2,-c.height/2);
+  try{_dt(x,c,k,s,X,Y,W,H)}finally{x.restore()}}});
+
+/* audio: auto-pan, L/R switch points */
+part('audio',()=>{
+ const _aa=applyA;applyA=function(k,el){_aa(k,el);const c=CH[k.mid];if(!c||!AC)return;let v=null;const t=(ph-k.s)/FPS;
+  if(k.pk&&k.pk.length){const f=ph-k.s,P=k.pk;let i=-1;P.forEach((a,j)=>{if(a.f<=f)i=j});
+   if(i<0)v=P[0].p;else if(!k.pg||i==P.length-1)v=P[i].p;else{const a=P[i],b=P[i+1];v=a.p+(b.p-a.p)*(f-a.f)/Math.max(1,b.f-a.f)}}
+  else if(k.ap){const s=Math.sin(6.2832*(k.apf??.25)*t);v=(k.apd??1)*(k.ap==2?(s>=0?1:-1):s)}
+  if(v!=null){const n=AC.currentTime;c.pn.pan.cancelScheduledValues(n);c.pn.pan.setValueAtTime(Math.max(-1,Math.min(1,v)),n)}};
+ /* these need real-time export */
+ const _ex=exportVid;exportVid=async function(){const need=S.clips.some(k=>k.pk||k.ap||(k.tx&&k.tx.kind=='viz'));
+  if(!need||!window.VideoEncoder)return _ex();const V=window.VideoEncoder;try{window.VideoEncoder=undefined}catch(e){}
+  try{toast('Standard export used (auto-pan / visualizer)');return await _ex()}finally{window.VideoEncoder=V}}});
+
+/* Studio+ panel */
+part('ui',()=>{
+ const A=document.createElement('div');A.id='zxp';A.className='zsh';document.body.appendChild(A);
+ const SHS=['#bin','#adj','#adj3','#adj4','#adj5','#adj6','#adj7','#zset','#zmg','#imenu'];
+ const T=[['text','Text FX'],['3d','3D'],['motion','Motion'],['audio','Audio']];
+ const RG=(l,k,mn,mx,st,v,s)=>'<label>'+l+'<input type=range data-k='+k+' data-s='+s+' min='+mn+' max='+mx+' step='+st+' value='+v+'></label>';
+ const B=(l,a,v,on)=>'<button data-a='+a+' data-v="'+v+'"'+(on?' class=on':'')+'>'+l+'</button>';
+ const ACT={txt:()=>{addT({});setTimeout(ui,400)},
+  add3:s=>{addT({kind:'c3',shape:s,t:'3D '+s,sz:240,c:'#4aa3ff',an:'none',ao:'none'});setTimeout(ui,100)},
+  addv:s=>{addT({kind:'viz',shape:s,t:'Visualizer',sz:240,c:'#22e06b',y:.72,an:'none',ao:'none'});setTimeout(ui,100)},
+  m2:v=>{const k=mk();if(!k)return toast('Tap a video or photo clip first');push();if(v)k.m2=v;else delete k.m2;stop();ph=k.s;R();ui();if(v){$('#pp').click();setTimeout(()=>{if(playing)stop()},2500)}},
+  ap:v=>{const k=ak();if(!k)return;push();k.ap=+v;if(+v)delete k.pk;R();ui()},
+  pk:v=>{const k=ak();if(!k)return toast('Tap an audio or video clip first');push();const f=Math.max(0,ph-k.s);k.pk=[...(k.pk||[]).filter(a=>a.f!=f),{f,p:+v}].sort((a,b)=>a.f-b.f);k.ap=0;R();ui();toast('Pan point at '+tc(f))},
+  pkc:()=>{const k=ak();if(!k)return;push();delete k.pk;R();ui()},
+  pm:v=>{const k=ak();if(!k)return;push();k.pg=+v;R();ui()},
+  fd:v=>{const k=ak();if(!k)return toast('Tap an audio or video clip first');push();const d=+v*FPS;if(d){k.ti={t:1,d};k.to={t:1,d}}else{delete k.ti;delete k.to}R();ui()}};
+ function ui(){if(!A.classList.contains('on'))return;
+  let h='<div class=hd><b>Studio+</b><button id=zxc>Close</button></div><div class=ch>'+T.map(t=>'<button data-tb="'+t[0]+'"'+(t[0]==tab?' class=on':'')+'>'+t[1]+'</button>').join('')+'</div>';
+  if(tab=='text'){const k=tk();h+='<div class=hd><button data-a=txt class=acc>Add text</button></div>';
+   if(!k)h+='<p>Tap a text clip on the T track to bend, rotate, add 3D depth or gradient.</p>';
+   else{const t=k.tx;h+=RG('Bend (curve)','bend',-1,1,.01,t.bend||0,'tx')+RG('Rotate','r',-180,180,1,t.r||0,'tx')+RG('3D depth','dp',0,40,1,t.dp||0,'tx')
+    +'<label>Depth colour<input type=color data-k=dc data-s=tx value='+(t.dc||'#1d2b64')+'></label>'
+    +'<label>Gradient fill<span><input type=checkbox data-k=gr data-s=tx '+(t.gr?'checked':'')+' style="width:auto"><input type=color data-k=c data-s=tx value='+t.c+'><input type=color data-k=c2 data-s=tx value='+(t.c2||'#ff3b5c')+'></span></label>'
+    +RG('Shadow','sh',0,3,.1,t.sh??.5,'tx')+'<p>Bend, depth and gradient replace the in/out text animation with a simple fade.</p>'}}
+  else if(tab=='3d'){const k=t3();h+='<div class=zh>Add</div><div class=ch>'+B('Cube','add3','cube')+B('Pyramid','add3','pyramid')+B('Sphere','add3','sphere')+B('Bars','addv','bars')+B('Ring','addv','ring')+'</div>';
+   if(!k)h+='<p>Add a shape or visualizer, then tap it on the T track to edit. The visualizer moves with your audio.</p>';
+   else{const t=k.tx;h+=RG('Size','sz',40,500,1,t.sz,'tx')+RG('Position X','x',0,1,.01,t.x,'tx')+RG('Position Y','y',0,1,.01,t.y,'tx')+'<label>Colour<input type=color data-k=c data-s=tx value='+t.c+'></label>'
+    +(t.kind=='c3'&&t.shape!='sphere'?RG('Spin speed','sp3',-3,3,.05,t.sp3??1,'tx')+RG('Tilt','tl3',-1.5,1.5,.05,t.tl3??.5,'tx'):t.kind=='c3'?RG('Spin speed','sp3',-3,3,.05,t.sp3??1,'tx'):'')}}
+  else if(tab=='motion'){const k=mk();
+   if(!k)h+='<p>Tap a video or photo clip first, then pick a motion. Works great on photos.</p>';
+   else h+='<div class=ch>'+[['None',''],['Ken Burns','kb'],['Spin 3D','spin'],['Tilt 3D','tilt'],['Swing','swing'],['Float','float'],['Heartbeat','beat'],['Shake','shk']].map(a=>B(a[0],'m2',a[1],(k.m2||'')==a[1])).join('')+'</div>'+RG('Intensity','m2i',.2,2,.05,k.m2i??1,'c')}
+  else{const k=ak();
+   if(!k)h+='<p>Tap an audio or video clip first.</p>';
+   else h+='<div class=zh>Auto pan</div><div class=ch>'+[['Off',0],['Smooth L-R',1],['Hard switch',2]].map(a=>B(a[0],'ap',a[1],(k.ap|0)==a[1])).join('')+'</div>'+RG('Speed (Hz)','apf',.05,2,.01,k.apf??.25,'c')+RG('Depth','apd',0,1,.01,k.apd??1,'c')
+    +'<div class=zh>Pan at playhead (choose when it switches)</div><div class=ch>'+B('Left','pk',-1)+B('Centre','pk',0)+B('Right','pk',1)+B('Clear ('+(k.pk||[]).length+')','pkc',0)+'</div><div class=ch>'+B('Jump','pm',0,!k.pg)+B('Glide','pm',1,!!k.pg)+'</div>'
+    +'<div class=zh>Fade in and out</div><div class=ch>'+[0,1,2,3].map(s=>B(s?s+'s':'None','fd',s)).join('')+'</div><p>Use headphones to hear left and right. Auto-pan and visualizer export in real time.</p>'}
+  A.innerHTML=h;$q('#zxc').onclick=()=>A.classList.remove('on');
+  A.querySelectorAll('[data-tb]').forEach(b=>b.onclick=()=>{tab=b.dataset.tb;ui()});
+  A.querySelectorAll('[data-a]').forEach(b=>b.onclick=()=>ACT[b.dataset.a](b.dataset.v));
+  A.querySelectorAll('[data-k]').forEach(r=>{r.onpointerdown=push;r.oninput=()=>{const c=selClip();if(!c)return;const v=r.type=='checkbox'?+r.checked:r.type=='color'?r.value:+r.value;
+   if(r.dataset.s=='tx')c.tx={...c.tx,[r.dataset.k]:v};else c[r.dataset.k]=v;R()}})}
+ const open=t=>{tab=t;SHS.forEach(s=>{const e=$q(s);if(e)e.classList.remove('on')});A.classList.add('on');ui()};
+ const sub=$q('.sub'),grp=$q('.grp'),ex=[];
+ const tool=(g,id,ic,lb,tb)=>{const b=document.createElement('button');b.id=id;b.dataset.g=g;b.innerHTML=IC(ic)+'<span>'+lb+'</span>';b.style.display='none';b.onclick=()=>open(tb);sub.appendChild(b);ex.push(b)};
+ tool(5,'zxt','type','Text FX','text');tool(3,'zx3','film','3D','3d');tool(3,'zxm','move','Motion+','motion');tool(4,'zxa','music','Audio FX','audio');
+ const sync=()=>{const i=[...grp.children].findIndex(b=>b.classList.contains('act'));ex.forEach(b=>b.style.display=+b.dataset.g===i?'':'none')};
+ new MutationObserver(sync).observe(grp,{subtree:true,attributes:true,attributeFilter:['class']});sync();
+ $q('.bar').addEventListener('click',e=>{const b=e.target.closest('button');if(b&&!/^zx/.test(b.id))A.classList.remove('on')},true);
+ setInterval(()=>{if(A.classList.contains('on')&&sel!==ls){ls=sel;ui()}},300)});
+})();
+</script>
+<!--/ZXP-->
 </body></html>
