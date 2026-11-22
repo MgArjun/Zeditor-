@@ -2123,6 +2123,7 @@ part('fast',()=>{
 </script>
 
 
+
 <!--ZXP-->
 <style id="zxpcss">
 #pv{height:42dvh!important}
@@ -2310,19 +2311,26 @@ part('fit',()=>{const _a=addClip;addClip=function(mid){_a(mid);const k=selClip()
 
 /* export menu: video+audio, fast, audio only */
 part('exp',()=>{const _e=exportVid;
- async function mixd(){const sr=44100,oc=new OfflineAudioContext(2,Math.ceil(sr*Math.max(1,end())/FPS),sr),M=mx();
+ async function mixd(){const sr=48000,oc=new OfflineAudioContext(2,Math.ceil(sr*Math.max(1,end())/FPS),sr),M=mx();
   for(const k of S.clips){if(k.fx!=null||k.tx||k.rv||!BL[k.mid]||MT(k)=='image')continue;const tk=k.tr=='A1'?'A1':k.tr=='A2'?'A2':'V';if(M.mu[tk]||(M.so&&M.so!=tk))continue;
    let b;try{b=await oc.decodeAudioData(await BL[k.mid].arrayBuffer())}catch(e){continue}
    const s=oc.createBufferSource(),p=oc.createStereoPanner(),g=oc.createGain(),t0=k.s/FPS;s.buffer=b;s.playbackRate.value=SP(k);p.pan.setValueAtTime(k.pan||0,0);
    if(k.pk&&k.pk.length)k.pk.forEach(a=>p.pan[k.pg?'linearRampToValueAtTime':'setValueAtTime'](a.p,t0+a.f/FPS));
-   g.gain.value=(k.vol??1)*M[tk]*M.M;s.connect(p);p.connect(g);g.connect(oc.destination);s.start(t0,k.i/FPS,(k.d/FPS)*SP(k));s.stop((k.s+k.d)/FPS)}
+   const v=(k.vol??1)*M[tk]*M.M,t1=(k.s+k.d)/FPS,fi=(k.ti&&k.ti.t==1?k.ti.d:0)/FPS,fo=(k.to&&k.to.t==1?k.to.d:0)/FPS,f=AFX[k.afx||0],bq=(ty,fr,ga)=>{const n=oc.createBiquadFilter();n.type=ty;n.frequency.value=fr;if(ga!=null)n.gain.value=ga;return n},hp=bq('highpass',f[0]),lp=bq('lowpass',f[1]),lo=bq('lowshelf',200,f[2]),hi=bq('highshelf',4000,f[3]);
+   g.gain.setValueAtTime(fi?0:v,t0);if(fi)g.gain.linearRampToValueAtTime(v,t0+fi);if(fo){g.gain.setValueAtTime(v,Math.max(t0+fi,t1-fo));g.gain.linearRampToValueAtTime(0,t1)}
+   s.connect(hp);hp.connect(lp);lp.connect(lo);lo.connect(hi);hi.connect(p);p.connect(g);g.connect(oc.destination);
+   if(f[4]){const dl=oc.createDelay(1),fb=oc.createGain(),w=oc.createGain();dl.delayTime.value=.28;fb.gain.value=.4;w.gain.value=f[4];hi.connect(dl);dl.connect(fb);fb.connect(dl);dl.connect(w);w.connect(p)}
+   s.start(t0,k.i/FPS,(k.d/FPS)*SP(k));s.stop(t1)}
   return oc.startRendering()}
+ window.zxMix=mixd;
  const cl=()=>$q('#xov').classList.remove('on');
  exportVid=function(){if(!S.clips.length)return toast('Add a clip to the timeline first');
-  xov('<div class=xb><b>Export</b><button class=acc id=zxe1>Video + audio</button><p>Real-time. Most reliable.</p><button id=zxe2>Video + audio, fast (beta)</button><p>Can hang on some phones.</p><button id=zxe3>Audio only (WAV)</button><button id=zxe4>Cancel</button></div>');
+  xov('<div class=xb><b>Export</b><button class=acc id=zxe2>Fast export</button><p>About 2x faster than real-time. Best choice.</p><button id=zxe1>Real-time export</button><p>Slower but safest.</p><button id=zxe3>Audio only (WAV)</button><button id=zxe4>Cancel</button></div>');
   $q('#zxe4').onclick=cl;
-  $q('#zxe1').onclick=async()=>{cl();const V=window.VideoEncoder;try{window.VideoEncoder=undefined}catch(e){}try{await _e()}finally{window.VideoEncoder=V}};
-  $q('#zxe2').onclick=()=>{cl();_e()};
+  const rt=async()=>{cl();const V=window.VideoEncoder;try{window.VideoEncoder=undefined}catch(e){}try{await _e()}finally{window.VideoEncoder=V}};
+  $q('#zxe1').onclick=rt;
+  $q('#zxe2').onclick=async()=>{cl();if(S.clips.some(k=>k.ap||(k.tx&&k.tx.kind=='viz'))){toast('Auto-pan / visualizer need real-time export');return rt()}
+   let ok=false;try{ok=await window.zxFast()}catch(e){console.error(e);cl()}if(!ok){toast('Fast export not possible here. Using real-time.');rt()}};
   $q('#zxe3').onclick=async()=>{cl();toast('Rendering audio...');stop();try{const b=wav(await mixd()),u=URL.createObjectURL(b),n=(S.name||'audio').split(' ').join('_')+'.wav';
    xov('<div class=xb><b>Audio ready</b><audio src="'+u+'" controls style="width:100%"></audio><p>'+esc(n)+' \u00b7 '+(b.size/1e6).toFixed(1)+' MB</p><div class=hd><a class="btn acc" href="'+u+'" download="'+esc(n)+'">Save audio</a><button id=zxe5>Close</button></div></div>');$q('#zxe5').onclick=cl}catch(e){toast('Audio render failed')}}}});
 
@@ -2393,6 +2401,54 @@ part('s3d',()=>{
   rs();rd();lp()}
  const sub=$q('.sub'),grp=$q('.grp'),b=document.createElement('button');b.id='zx3d';b.dataset.g=3;b.innerHTML=IC('film')+'<span>3D Studio</span>';b.style.display='none';b.onclick=open;sub.appendChild(b);
  new MutationObserver(()=>{const i=[...grp.children].findIndex(x=>x.classList.contains('act'));b.style.display=i===3?'':'none'}).observe(grp,{subtree:true,attributes:true,attributeFilter:['class']})});
+
+/* new fast export: plays the video through (no per-frame seeking), encodes with WebCodecs */
+part('fx2',()=>{
+ const LIB='https://cdn.jsdelivr.net/npm/mp4-muxer@5.1.3/build/mp4-muxer.js',wait=ms=>new Promise(r=>setTimeout(r,ms)),raf=()=>new Promise(r=>requestAnimationFrame(r));
+ const ld=u=>new Promise((a,b)=>{const s=document.createElement('script');s.src=u;s.onload=a;s.onerror=b;document.head.appendChild(s)});
+ const geom=()=>{let r=16/9;try{const q=JSON.parse(localStorage.getItem('zp5')||'{}').rt||'auto';if(q!='auto'){const a=q.split(':');r=a[0]/a[1]}else{const k=S.clips.find(k=>/^V[12]$/.test(k.tr)),el=k&&E[k.mid],w=el&&(el.videoWidth||el.naturalWidth),h=el&&(el.videoHeight||el.naturalHeight);if(w&&h)r=w/h}}catch(e){}
+  let W,H,sw,sh,sx=0,sy=0;if(r>=1){H=720;W=Math.round(720*r)}else{W=720;H=Math.round(720/r)}W&=~1;H&=~1;if(r<16/9){sh=720;sw=720*r;sx=(1280-sw)/2}else{sw=1280;sh=1280/r;sy=(720-sh)/2}return{W,H,sw,sh,sx,sy}};
+ window.zxFast=async function(){
+  const tot=end();if(!tot||!window.VideoEncoder||!window.AudioEncoder||!window.VideoFrame||!window.AudioData||!window.zxMix)return false;
+  const g=geom(),vc={codec:'avc1.640028',width:g.W,height:g.H,bitrate:Math.min(4e7,window.ZS?ZS.br:16e6),framerate:FPS};
+  if(!(await VideoEncoder.isConfigSupported(vc).catch(()=>({}))).supported)return false;
+  let ac='mp4a.40.2',mc='aac';const ar=c=>AudioEncoder.isConfigSupported({codec:c,sampleRate:48000,numberOfChannels:2,bitrate:192e3}).catch(()=>({}));
+  if(!(await ar(ac)).supported){ac='opus';mc='opus';if(!(await ar(ac)).supported)return false}
+  if(!window.Mp4Muxer)await ld(LIB);
+  const tg=new Mp4Muxer.ArrayBufferTarget(),mu=new Mp4Muxer.Muxer({target:tg,video:{codec:'avc',width:g.W,height:g.H},audio:{codec:mc,numberOfChannels:2,sampleRate:48000},fastStart:'in-memory'});
+  let err=null,cancel=0;
+  const ve=new VideoEncoder({output:(c,m)=>mu.addVideoChunk(c,m),error:e=>{err=e}});ve.configure(vc);
+  const ae=new AudioEncoder({output:(c,m)=>mu.addAudioChunk(c,m),error:e=>{err=e}});ae.configure({codec:ac,sampleRate:48000,numberOfChannels:2,bitrate:192e3});
+  xov('<div class=xb><b>Fast export</b><div class=pb><i id=xp></i></div><p id=xt>Preparing audio...</p><button id=xc2>Cancel</button></div>');
+  $q('#xc2').onclick=()=>{cancel=1};
+  const sph=ph,t0=performance.now(),oT=window.TT,oMG=MG?MG.gain.value:1;stop();
+  try{
+   const ab=await zxMix(),L=ab.getChannelData(0),Rr=ab.numberOfChannels>1?ab.getChannelData(1):L;
+   for(let o=0;o<ab.length&&!cancel;o+=4800){const n=Math.min(4800,ab.length-o),d=new Float32Array(n*2);d.set(L.subarray(o,o+n),0);d.set(Rr.subarray(o,o+n),n);
+    const ad=new AudioData({format:'f32-planar',sampleRate:48000,numberOfFrames:n,numberOfChannels:2,timestamp:Math.round(o/48000*1e6),data:d});ae.encode(ad);ad.close()}
+   await ae.flush();
+   window.TT=k=>k.rv?oT(k):((E[k.mid]&&E[k.mid].currentTime)||0);if(MG)MG.gain.value=0;
+   const oc=document.createElement('canvas');oc.width=g.W;oc.height=g.H;const x=oc.getContext('2d'),cv=$q('#cv');let dt=1/60,l=performance.now();
+   for(let f=0;f<tot&&!cancel&&!err;f++){
+    ph=f;const pr=[];
+    for(const k of S.clips){const el=E[k.mid],m=S.media[k.mid];if(!el||!m||m.type!='video'||!/^V[12]$/.test(k.tr)||k.rv)continue;
+     if(f>=k.s&&f<k.s+k.d){const ex=(k.i+(f-k.s)*SP(k))/FPS;el.volume=0;el.playbackRate=Math.min(16,Math.max(.0625,SP(k)/FPS/dt));
+      if(el.paused||Math.abs(el.currentTime-ex)>.25){el.currentTime=ex;pr.push(new Promise(r=>{const h=()=>{el.removeEventListener('seeked',h);r()};el.addEventListener('seeked',h);setTimeout(h,700)}));if(el.paused)el.play().catch(()=>{})}}
+     else if(!el.paused)el.pause()}
+    if(pr.length)await Promise.all(pr);
+    draw();x.drawImage(cv,g.sx,g.sy,g.sw,g.sh,0,0,g.W,g.H);
+    const fr=new VideoFrame(oc,{timestamp:Math.round(f*1e6/FPS),duration:Math.round(1e6/FPS)});ve.encode(fr,{keyFrame:f%90==0});fr.close();
+    while(ve.encodeQueueSize>8)await wait(2);
+    await raf();const n=performance.now();dt=dt*.9+((n-l)/1000)*.1;l=n;
+    if(f%10==0){const xp=$q('#xp'),xt=$q('#xt');if(xp)xp.style.width=(f/tot*100)+'%';if(xt)xt.textContent=Math.round(f/tot*100)+'% \u00b7 '+(f/FPS/Math.max(.1,(n-t0)/1000)).toFixed(1)+'x real-time'}}
+   if(cancel){cl2();return true}
+   if(err)throw err;
+   await ve.flush();mu.finalize();
+   const bl=new Blob([tg.buffer],{type:'video/mp4'}),u=URL.createObjectURL(bl),nm=(S.name||'video').split(' ').join('_')+'.mp4';
+   xov('<div class=xb><b>Export ready</b><video src="'+u+'" controls playsinline></video><p>'+esc(nm)+' \u00b7 '+(bl.size/1e6).toFixed(1)+' MB \u00b7 '+g.W+'\u00d7'+g.H+' \u00b7 '+((performance.now()-t0)/1000).toFixed(0)+' s</p><div class=hd><a class="btn acc" href="'+u+'" download="'+esc(nm)+'">Save video</a><button id=zxc9>Close</button></div></div>');
+   $q('#zxc9').onclick=cl2;return true}
+  finally{window.TT=oT;if(MG)MG.gain.value=oMG;ph=sph;for(const el of Object.values(E))if(el&&el.pause){el.pause();el.volume=1}R()}};
+ const cl2=()=>$q('#xov').classList.remove('on')});
 })();
 </script>
 <!--/ZXP-->
