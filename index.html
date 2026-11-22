@@ -2453,6 +2453,7 @@ part('fx2',()=>{
 </script>
 <!--/ZXP-->
 
+
 <!--ZQ-->
 <style id="zqcss">
 .grp button{flex:1 0 auto!important;min-width:62px}
@@ -2624,6 +2625,47 @@ part('s3',()=>{
    addEventListener('resize',()=>{if(ov.classList.contains('on'))rs()});add('cube')}
   rs();ui();if(!raf)lp()}
  window.zq3=open});
+
+/* 5. auto captions (Whisper AI in the browser, internet once for the model) */
+part('cap',()=>{
+ const sub=$q('.sub'),grp=$q('.grp'),B=document.createElement('button');
+ let lang='hindi',mod='Xenova/whisper-base',pipe=null,pm='';
+ B.id='zqc';B.dataset.g=5;B.innerHTML=IC('type')+'<span>Auto captions</span>';B.style.display='none';sub.appendChild(B);
+ const sync=()=>{B.style.display=[...grp.children].findIndex(x=>x.classList.contains('act'))===5?'':'none'};
+ new MutationObserver(sync).observe(grp,{subtree:true,attributes:true,attributeFilter:['class']});
+ const cl=()=>$q('#xov').classList.remove('on');
+ B.onclick=()=>{const k=selClip();if(!k||k.fx!=null||k.tx||!BL[k.mid]||MT(k)=='image')return toast('Tap an imported video or audio clip first');
+  const ch=(a,q)=>'<div class=ch>'+a.map(x=>'<button data-'+q+'="'+x[1]+'">'+x[0]+'</button>').join('')+'</div>';
+  xov('<div class=xb><b>Auto captions</b><p>Writes the speech of the selected clip as caption lines. Needs internet once to download the AI model.</p>'+ch([['Hindi','hindi'],['English','english'],['Auto','auto']],'l')+ch([['Quick 40 MB','Xenova/whisper-tiny'],['Better 80 MB','Xenova/whisper-base']],'m')+'<button class=acc id=zqcs>Start</button><button id=zqcx>Cancel</button></div>');
+  const X=$q('#xov'),mark=()=>{X.querySelectorAll('[data-l]').forEach(b=>b.classList.toggle('on',b.dataset.l==lang));X.querySelectorAll('[data-m]').forEach(b=>b.classList.toggle('on',b.dataset.m==mod))};
+  mark();X.querySelectorAll('[data-l]').forEach(b=>b.onclick=()=>{lang=b.dataset.l;mark()});X.querySelectorAll('[data-m]').forEach(b=>b.onclick=()=>{mod=b.dataset.m;mark()});
+  $q('#zqcx').onclick=cl;$q('#zqcs').onclick=()=>run(k)};
+ async function run(k){
+  const set=t=>{const e=$q('#zqct');if(e)e.textContent=t};
+  xov('<div class=xb><b>Auto captions</b><div class=pb><i id=zqcp></i></div><p id=zqct>Loading AI...</p></div>');
+  try{
+   if(!pipe||pm!==mod){const T=await import('https://cdn.jsdelivr.net/npm/@xenova/transformers@2.17.2');T.env.allowLocalModels=false;
+    pipe=await T.pipeline('automatic-speech-recognition',mod,{progress_callback:p=>{if(p.status=='progress'){const e=$q('#zqcp');if(e)e.style.width=p.progress+'%';set('Downloading AI model '+Math.round(p.progress)+'%')}}});pm=mod}
+   set('Reading audio...');
+   const AX=window.AudioContext||window.webkitAudioContext,ac=new AX({sampleRate:16000}),buf=await ac.decodeAudioData(await BL[k.mid].arrayBuffer());if(ac.close)ac.close();
+   const a0=Math.floor(k.i/FPS*16000),a1=Math.floor((k.i+k.d*SP(k))/FPS*16000),n=Math.max(0,Math.min(a1,buf.length)-a0),c0=buf.getChannelData(0),c1=buf.numberOfChannels>1?buf.getChannelData(1):c0,d=new Float32Array(n);
+   if(!n){cl();return toast('No audio in this clip')}
+   for(let i=0;i<n;i++)d[i]=(c0[a0+i]+c1[a0+i])/2;
+   set('Listening... this can take a few minutes. Keep this tab open.');
+   const o=await pipe(d,{chunk_length_s:30,stride_length_s:5,return_timestamps:true,task:'transcribe',...(lang=='auto'?{}:{language:lang})});
+   const ch=(o.chunks||[]).filter(c=>c.text&&c.text.trim());
+   if(!ch.length){cl();return toast('No speech found')}
+   const sp=SP(k),L=[];
+   for(const c of ch){const s=k.s+Math.round((c.timestamp[0]||0)*FPS/sp),e=Math.max(s+12,k.s+Math.round(((c.timestamp[1]==null?(c.timestamp[0]||0)+2:c.timestamp[1]))*FPS/sp)),w=c.text.trim().split(/\s+/),m=Math.ceil(w.length/6);
+    for(let j=0;j<m;j++)L.push({s:s+Math.round((e-s)*j/m),e:s+Math.round((e-s)*(j+1)/m),t:w.slice(j*6,j*6+6).join(' ')})}
+   push();S.cap=[...(S.cap||[]),...L].sort((a,b)=>a.s-b.s);R();cl();toast(L.length+' caption lines added');
+   const cb=document.getElementById('cap');if(cb)cb.click()
+  }catch(e){console.error(e);cl();toast('AI captions failed. Check your internet and try again')}}});
+
+/* 6. film-brand look names replaced with plain descriptive names */
+part('names',()=>{
+ const RN={'Mindhunter Steel':'Steel Grey','Money Heist Red':'Heist Red','Blade Runner':'Neon Amber','Dune Sand':'Desert Sand','Oppenheimer':'Atomic Grain','The Batman':'Night Rain','John Wick':'Neon Night','Joker':'Sickly Green','Interstellar':'Cold Space','Se7en':'Grim Grit','Matrix':'Green Code','Grand Budapest':'Pastel Hotel','La La Land':'Dream Pop','Drive':'Neon Drive','Sicario':'Dusty Tension','Amelie':'Storybook','Fight Club':'Gritty Green','Portra Warm':'Warm Portrait','Vision3 500T':'Tungsten Film','Eterna Cool':'Cool Film','Cinestill 800T':'Night Glow','Technicolor':'Vivid Classic','Nat-Geo Vivid':'Nature Vivid','Digital Rain Green':'Code Rain','Space Odyssey':'Deep Space','Superhero Clean':'Hero Clean','Neo-Noir B&W':'Noir B&W','Slow-Burn Thriller':'Slow Thriller'};
+ LK.forEach(l=>{if(RN[l[0]])l[0]=RN[l[0]]})});
 })();
 </script>
 <!--/ZQ-->
