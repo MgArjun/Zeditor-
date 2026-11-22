@@ -1734,4 +1734,101 @@ part('tstyle',()=>{const A=$q('#adj6');if(!A)return;
   tt.after(d);d.querySelectorAll('[data-ts]').forEach(b=>b.onclick=()=>{const k=selClip();if(!k||!k.tx)return;push();k.tx={...k.tx,...TS[+b.dataset.ts][1]};R();txtUI()})}
  new MutationObserver(fix).observe(A,{childList:true,subtree:true});fix()});
 })();</script>
+
+<script id="zp11js">(function(){
+const part=(n,f)=>{try{f()}catch(e){console.error('zp11 '+n,e)}};
+const $q=s=>document.querySelector(s);
+part('presets',()=>{const N=['Muffled','Walkie','Crisp','Warm','Big Echo','Underwater','Podcast'],X=[[10,1200,0,-6,0],[600,3200,-6,4,0],[120,22000,-3,8,0],[10,12000,5,-2,0],[10,16000,0,0,.7],[10,700,4,-8,.3],[80,16000,3,3,0]];N.forEach((n,i)=>{AFN.push(n);AFX.push(X[i])})});
+const okc=()=>{const k=selClip();return k&&k.fx==null&&!k.tx&&BL[k.mid]&&MT(k)!='image'?k:null};
+async function seg(k,rev){const b=await ctx().decodeAudioData(await BL[k.mid].arrayBuffer()),sr=b.sampleRate,a=Math.floor(k.i/FPS*sr),n=Math.max(1,Math.min(b.length-a,Math.floor(k.d*SP(k)/FPS*sr))),o=ctx().createBuffer(Math.min(2,b.numberOfChannels),n,sr);
+ for(let c=0;c<o.numberOfChannels;c++){o.getChannelData(c).set(b.getChannelData(c).subarray(a,a+n));if(rev)o.getChannelData(c).reverse()}return o}
+async function bake(rev){const k=okc();if(!k)return toast('Tap an imported video or audio clip first');toast('Working...');
+ try{const o=await seg(k,rev);await libAdd(wav(o),(rev?'Reversed ':'Audio ')+S.media[k.mid].name,'Music');await addLib(lastLib,'A1',k.s);k.vol=0;R();toast(rev?'Reversed audio added. Original muted':'Audio detached. Original muted')}catch(e){toast('Could not read audio')}}
+async function mixdown(rev){const sr=44100,tot=Math.max(1,end())/FPS,oc=new OfflineAudioContext(2,Math.ceil(sr*tot),sr),M=mx();
+ for(const k of S.clips){if(k.fx!=null||k.tx||k.rv||!BL[k.mid]||MT(k)=='image')continue;
+  const tk=k.tr=='A1'?'A1':k.tr=='A2'?'A2':'V';if(M.mu[tk]||(M.so&&M.so!=tk))continue;
+  let b;try{b=await oc.decodeAudioData(await BL[k.mid].arrayBuffer())}catch(e){continue}
+  const s=oc.createBufferSource();s.buffer=b;s.playbackRate.value=SP(k);
+  const f=AFX[k.afx||0],mk=(t,fr,g)=>{const n=oc.createBiquadFilter();n.type=t;n.frequency.value=fr;if(g!=null)n.gain.value=g;return n},
+   hp=mk('highpass',f[0]),lp=mk('lowpass',f[1]),lo=mk('lowshelf',200,f[2]),hi=mk('highshelf',4000,f[3]),p=oc.createStereoPanner(),g=oc.createGain();
+  p.pan.value=k.pan||0;const v=(k.vol??1)*M[tk]*M.M,t0=k.s/FPS,t1=(k.s+k.d)/FPS,fi=(k.ti&&k.ti.t==1?k.ti.d:0)/FPS,fo=(k.to&&k.to.t==1?k.to.d:0)/FPS;
+  g.gain.setValueAtTime(fi?0:v,t0);if(fi)g.gain.linearRampToValueAtTime(v,t0+fi);if(fo){g.gain.setValueAtTime(v,Math.max(t0+fi,t1-fo));g.gain.linearRampToValueAtTime(0,t1)}
+  s.connect(hp);hp.connect(lp);lp.connect(lo);lo.connect(hi);hi.connect(p);p.connect(g);g.connect(oc.destination);
+  s.start(t0,k.i/FPS,(k.d/FPS)*SP(k));s.stop(t1)}
+ const r=await oc.startRendering();if(rev)for(let c=0;c<r.numberOfChannels;c++)r.getChannelData(c).reverse();return r}
+async function saveAudio(rev){if(!S.clips.length)return toast('Timeline is empty');toast('Rendering audio...');stop();
+ let b;try{b=await mixdown(rev)}catch(e){return toast('Audio render failed')}
+ const bl=wav(b),u=URL.createObjectURL(bl),n=(S.name||'audio').split(' ').join('_')+(rev?'_reversed':'')+'.wav';
+ xov('<div class=xb><b>Audio ready</b><audio src="'+u+'" controls style="width:100%"></audio><p>'+esc(n)+' - '+(bl.size/1e6).toFixed(1)+' MB - WAV</p><div class=hd><a class="btn acc" href="'+u+'" download="'+esc(n)+'">Save audio</a><button id=z11c>Close</button></div></div>');
+ $q('#z11c').onclick=()=>$q('#xov').classList.remove('on')}
+part('tools',()=>{const sub=$q('.sub'),grp=$q('.grp');if(!sub||!grp)return;const ex=[];
+ const t=(g,id,ic,lb,fn)=>{const b=document.createElement('button');b.id=id;b.dataset.g=g;b.innerHTML=IC(ic)+'<span>'+lb+'</span>';b.onclick=fn;b.style.display='none';sub.appendChild(b);ex.push(b)};
+ t(4,'z11d','scissors','Detach',()=>bake(false));
+ t(4,'z11r','undo','Reverse',()=>bake(true));
+ t(4,'z11s','dl','Save audio',()=>saveAudio(false));
+ t(4,'z11v','undo','Save reversed',()=>saveAudio(true));
+ t(1,'z11m','plus','Marker',()=>{S.bm=[...(S.bm||[]),ph].filter((v,i,a)=>a.indexOf(v)==i).sort((a,b)=>a-b);dirty=1;R();toast('Marker at '+tc(ph))});
+ const sync=()=>{const i=[...grp.children].findIndex(b=>b.classList.contains('act'));ex.forEach(b=>b.style.display=+b.dataset.g===i?'':'none')};
+ new MutationObserver(sync).observe(grp,{subtree:true,attributes:true,attributeFilter:['class']});sync()});
+})();</script>
+
+<style id="zp12css">.pal9{display:grid;grid-template-columns:repeat(12,1fr);gap:4px;margin:6px 0}.pal9 i{aspect-ratio:1;border-radius:8px;border:1px solid #ffffff30}</style>
+<script id="zp12js">(function(){
+const part=(n,f)=>{try{f()}catch(e){console.error('zp12 '+n,e)}};
+const $q=s=>document.querySelector(s);
+const ld=u=>new Promise((a,b)=>{const s=document.createElement('script');s.src=u;s.crossOrigin='anonymous';s.onload=a;s.onerror=b;document.head.appendChild(s)});
+const dim=s=>[s.videoWidth||s.naturalWidth||s.width,s.videoHeight||s.naturalHeight||s.height];
+part('crop',()=>{let CRC=null;const _d=drawT;drawT=function(x,c,k,s,X,Y,W,H){const r=k.cr;
+ if(r&&(r.l||r.r||r.t||r.b)){const[w,h]=dim(s);if(w){const sw=w*(1-(r.l||0)-(r.r||0)),sh=h*(1-(r.t||0)-(r.b||0));
+  if(sw>4&&sh>4){const t=CRC||(CRC=document.createElement('canvas'));t.width=Math.round(sw);t.height=Math.round(sh);t.getContext('2d').drawImage(s,(r.l||0)*w,(r.t||0)*h,sw,sh,0,0,t.width,t.height);
+   return _d(x,c,k,t,X+(r.l||0)*W,Y+(r.t||0)*H,W*(1-(r.l||0)-(r.r||0)),H*(1-(r.t||0)-(r.b||0)))}}}
+ return _d(x,c,k,s,X,Y,W,H)}});
+part('ai',()=>{let seg=null,busy=0,lt=-1,loading=0;const mc=document.createElement('canvas'),t2=document.createElement('canvas');
+ async function init(){if(seg||loading)return;loading=1;toast('Loading AI (internet)...');
+  try{const B='https://cdn.jsdelivr.net/npm/@mediapipe/selfie_segmentation@0.1/';await ld(B+'selfie_segmentation.js');seg=new SelfieSegmentation({locateFile:f=>B+f});seg.setOptions({modelSelection:1});
+   seg.onResults(r=>{const m=r.segmentationMask;mc.width=m.width;mc.height=m.height;mc.getContext('2d').drawImage(m,0,0);R()});toast('AI ready')}catch(e){toast('AI could not load. Check internet')}loading=0}
+ const send=s=>{busy=1;seg.send({image:s}).catch(()=>{}).then(()=>{busy=0})};
+ const _d=drawT;drawT=function(x,c,k,s,X,Y,W,H){
+  if(k.ai){if(!seg)init();else{const el=E[k.mid],t=Math.round(((el&&el.currentTime)||0)*1000);if(!busy&&t!=lt){lt=t;send(s)}
+   if(mc.width){const[w,h]=dim(s);if(w){t2.width=w;t2.height=h;const g=t2.getContext('2d');g.clearRect(0,0,w,h);g.drawImage(s,0,0,w,h);g.globalCompositeOperation='destination-in';g.drawImage(mc,0,0,w,h);g.globalCompositeOperation='source-over';return _d(x,c,k,t2,X,Y,W,H)}}}}
+  return _d(x,c,k,s,X,Y,W,H)};window.zpAI=init});
+part('kf',()=>{const _m=window.moT;window.moT=function(k){const o=_m(k),K=k.kf;if(!K||!K.length)return o;const f=ph-k.s,b=k.xf||{};let v;
+ if(f<=K[0].f)v=K[0];else if(f>=K[K.length-1].f)v=K[K.length-1];else{let i=0;while(K[i+1].f<f)i++;const p=K[i],q=K[i+1],u=(f-p.f)/(q.f-p.f),e=u*u*(3-2*u),L=n=>p[n]+(q[n]-p[n])*e;v={s:L('s'),x:L('x'),y:L('y'),r:L('r')}}
+ o.x+=v.x-(b.x||0);o.y+=v.y-(b.y||0);o.s*=v.s/(b.s??1);o.r+=v.r-(b.r||0);return o}});
+part('kfui',()=>{const A=$q('#adj7');if(!A)return;
+ const cur=k=>({s:(k.xf&&k.xf.s)??1,x:(k.xf&&k.xf.x)||0,y:(k.xf&&k.xf.y)||0,r:(k.xf&&k.xf.r)||0});
+ const upsert=k=>{const f=Math.max(0,ph-k.s);k.kf=(k.kf||[]).filter(a=>a.f!=f);k.kf.push({f,...cur(k)});k.kf.sort((a,b)=>a.f-b.f)};
+ function build(){if(!A.querySelector('[data-xs]')||A.querySelector('#z12k'))return;const k=selClip();if(!k)return;const d=document.createElement('div');d.id='z12k';
+  d.innerHTML='<div class="zh">Keyframes</div><div class="ch"><button id="z12a">\u25C6 Add here</button><button id="z12c">Clear ('+((k.kf||[]).length)+')</button></div><p>Playhead jahan chahiye wahan le jao, Scale/Position/Rotate set karo, phir Add here. Beech ka motion apne aap banta hai. Keyframe ke baad slider hilane se us frame ka keyframe badalta hai.</p><div class="zh">Crop</div>'
+  +[['l','Left'],['r','Right'],['t','Top'],['b','Bottom']].map(a=>'<label>'+a[1]+'<input type="range" data-cr="'+a[0]+'" min="0" max=".9" step=".01" value="'+((k.cr&&k.cr[a[0]])||0)+'"></label>').join('')
+  +'<div class="zh">AI</div><div class="ch"><button id="z12b"'+(k.ai?' class="on"':'')+'>Remove background (internet)</button></div>';
+  A.appendChild(d);
+  $q('#z12a').onclick=()=>{const c=selClip();push();upsert(c);R();toast('Keyframe at '+tc(Math.max(0,ph-c.s)));clipUI()};
+  $q('#z12c').onclick=()=>{push();delete selClip().kf;R();clipUI()};
+  d.querySelectorAll('[data-cr]').forEach(r=>{r.onpointerdown=push;r.oninput=()=>{const c=selClip();c.cr={...c.cr,[r.dataset.cr]:+r.value};R()}});
+  $q('#z12b').onclick=()=>{push();const c=selClip();c.ai=c.ai?0:1;if(c.ai&&window.zpAI)zpAI();R();clipUI()}}
+ A.addEventListener('input',e=>{if(!e.target.dataset||!e.target.dataset.xs)return;const k=selClip();if(!k||!k.kf||!k.kf.length)return;setTimeout(()=>{upsert(k);R()},0)});
+ new MutationObserver(build).observe(A,{childList:true});build()});
+part('mp3',()=>{const X=$q('#xov');if(!X)return;
+ new MutationObserver(()=>{const au=X.querySelector('audio'),hd=X.querySelector('.hd'),dl=X.querySelector('a[download]');if(!au||!hd||!dl||X.querySelector('#z12m'))return;
+  const b=document.createElement('button');b.id='z12m';b.textContent='Make MP3 (internet)';hd.prepend(b);
+  b.onclick=async()=>{try{b.textContent='Converting...';if(!window.lamejs)await ld('https://cdn.jsdelivr.net/npm/lamejs@1.2.1/lame.min.js');
+   const buf=await ctx().decodeAudioData(await (await fetch(au.src)).arrayBuffer()),ch=Math.min(2,buf.numberOfChannels),enc=new lamejs.Mp3Encoder(ch,buf.sampleRate,128);
+   const I=a=>{const o=new Int16Array(a.length);for(let i=0;i<a.length;i++)o[i]=Math.max(-1,Math.min(1,a[i]))*32767;return o};
+   const L=I(buf.getChannelData(0)),Rr=ch>1?I(buf.getChannelData(1)):null,out=[];
+   for(let i=0;i<L.length;i+=1152){const d=ch>1?enc.encodeBuffer(L.subarray(i,i+1152),Rr.subarray(i,i+1152)):enc.encodeBuffer(L.subarray(i,i+1152));if(d.length)out.push(d)}
+   const e=enc.flush();if(e.length)out.push(e);
+   const a=document.createElement('a');a.href=URL.createObjectURL(new Blob(out,{type:'audio/mpeg'}));a.download=dl.download.replace('.wav','.mp3');a.click();b.textContent='Make MP3 (internet)'}
+   catch(err){toast('MP3 failed. Check internet');b.textContent='Make MP3 (internet)'}}}).observe(X,{childList:true})});
+part('tx',()=>{const A=$q('#adj6');if(!A)return;
+ const h2x=(h,s,l)=>{s/=100;l/=100;const a=s*Math.min(l,1-l),f=n=>{const k=(n+h/30)%12;return Math.round(255*(l-a*Math.max(-1,Math.min(k-3,9-k,1)))).toString(16).padStart(2,'0')};return '#'+f(0)+f(8)+f(4)};
+ function fix(){const c=A.querySelector('input[data-tc=c]');if(!c||A.querySelector('#z12p'))return;const d=document.createElement('div');d.id='z12p';let m='<div class="zh">Shades</div><div class="pal9">';
+  for(const l of [88,72,56,40,24])for(let i=0;i<12;i++){const x=h2x(i*30,90,l);m+='<i data-x="'+x+'" style="background:'+x+'"></i>'}
+  for(let i=0;i<12;i++){const x=h2x(0,0,Math.round(i/11*100));m+='<i data-x="'+x+'" style="background:'+x+'"></i>'}
+  m+='</div><div class="zh">Size</div><div class="ch">'+[24,36,48,64,80,100,140,200].map(n=>'<button data-z="'+n+'">'+n+'</button>').join('')+'</div>';d.innerHTML=m;
+  const hd=c.closest('.hd');if(hd)hd.after(d);
+  d.querySelectorAll('[data-x]').forEach(i=>i.onclick=()=>{c.value=i.dataset.x;c.dispatchEvent(new Event('input',{bubbles:true}))});
+  d.querySelectorAll('[data-z]').forEach(b=>b.onclick=()=>{const k=selClip();if(!k||!k.tx)return;push();k.tx={...k.tx,sz:+b.dataset.z};R();txtUI()})}
+ new MutationObserver(fix).observe(A,{childList:true,subtree:true});fix()});
+})();</script>
 </body></html>
