@@ -2121,6 +2121,7 @@ part('fast',()=>{
   if(!ok)return _e()}});
 })();
 </script>
+
 <!--ZXP-->
 <style id="zxpcss">
 #pv{height:42dvh!important}
@@ -2137,6 +2138,12 @@ part('fast',()=>{
 #zxp .ch{flex-wrap:wrap}
 #zxp p{font-size:12px;color:var(--m);margin:6px 0}
 #zxp label span{display:flex;gap:6px;align-items:center}
+html.z13sel #zca.on{display:none!important}
+html.zxv .clip[data-snd].sel,html.zxa .clip.sel:not([data-snd]){border-color:transparent!important;box-shadow:none!important}
+#zxd{position:fixed;left:50%;transform:translateX(-50%);bottom:calc(190px + env(safe-area-inset-bottom,0px));z-index:40;display:none;gap:6px;padding:6px;border-radius:999px;background:rgba(10,18,40,.94);border:1px solid rgba(120,170,255,.3);box-shadow:0 10px 30px rgba(0,0,0,.6)}
+#zxd.on{display:flex}
+#zxd button{min-height:40px;padding:0 14px;border-radius:999px;font-weight:600}
+#zxd button:not([data-d=x]){background:linear-gradient(#ff5d73,#c8283f);color:#fff}
 </style>
 <script id="zxpjs">
 (function(){
@@ -2259,6 +2266,47 @@ part('ui',()=>{
  new MutationObserver(sync).observe(grp,{subtree:true,attributes:true,attributeFilter:['class']});sync();
  $q('.bar').addEventListener('click',e=>{const b=e.target.closest('button');if(b&&!/^zx/.test(b.id))A.classList.remove('on')},true);
  setInterval(()=>{if(A.classList.contains('on')&&sel!==ls){ls=sel;ui()}},300)});
+
+/* delete popup only after tapping a clip; video part and audio part are separate */
+part('sel',()=>{
+ const T=$q('#tl'),H=document.documentElement,pop=document.createElement('div');let dn=null,tp=null,pt='v';pop.id='zxd';document.body.appendChild(pop);
+ const act=d=>{const k=selClip();pop.classList.remove('on');tp=null;if(d=='x'||!k)return;push();
+  if(d=='v'){k.tr='A1';k.vol=k.vol??1;toast('Video removed. Sound kept on A1')}
+  else if(d=='a'){k.vol=0;toast('Audio removed')}
+  else{S.clips=S.clips.filter(x=>x!==k);sel=null;toast('Deleted')}R()};
+ const show=()=>setTimeout(()=>{const k=selClip();if(!k||k.id!==tp){pop.classList.remove('on');return}
+  const isV=/^V[12]$/.test(k.tr)&&k.fx==null&&!k.tx&&MT(k)=='video';
+  pop.innerHTML=(isV?(pt=='a'?'<button data-d=a>Delete audio</button>':'<button data-d=v>Delete video</button>')+'<button data-d=all>Delete both</button>':'<button data-d=all>Delete</button>')+'<button data-d=x>\u2715</button>';
+  pop.classList.add('on');pop.querySelectorAll('button').forEach(b=>b.onclick=()=>act(b.dataset.d))},30);
+ T.addEventListener('pointerdown',e=>{dn={x:e.clientX,y:e.clientY,t:e.target}},true);
+ T.addEventListener('pointerup',e=>{if(!dn)return;const mv=Math.hypot(e.clientX-dn.x,e.clientY-dn.y)>8,c=dn.t.closest&&dn.t.closest('.clip');dn=null;if(mv)return;
+  if(!c){tp=null;pop.classList.remove('on');return}tp=+c.dataset.id;pt=c.dataset.snd?'a':'v';H.classList.toggle('zxa',pt=='a');H.classList.toggle('zxv',pt=='v');show()},true);
+ setInterval(()=>{if(playing||sel!==tp)pop.classList.remove('on')},150)});
+
+/* new clip: fill the frame when its shape does not match the chosen ratio (camera videos) */
+part('fit',()=>{const _a=addClip;addClip=function(mid){_a(mid);const k=selClip(),el=E[mid],m=S.media[mid];if(!k||!el||!m||m.type=='audio')return;
+  let r=null;try{r=JSON.parse(localStorage.getItem('zp5')||'{}').rt}catch(e){}if(!r||r=='auto')return;
+  const a=r.split(':'),f=a[0]/a[1],w=el.videoWidth||el.naturalWidth,h=el.videoHeight||el.naturalHeight;if(!w||Math.abs(w/h-f)/f<.12)return;
+  const vr=w/h,cr=16/9;let dw,dh,fw,fh;if(vr>cr){dw=1280;dh=1280/vr}else{dh=720;dw=720*vr}if(f<cr){fh=720;fw=720*f}else{fw=1280;fh=1280/f}
+  k.xf={...k.xf,s:Math.min(6,Math.max(fw/dw,fh/dh))};R();toast('Filled to frame. Transform > Reset to undo')}});
+
+/* export menu: video+audio, fast, audio only */
+part('exp',()=>{const _e=exportVid;
+ async function mixd(){const sr=44100,oc=new OfflineAudioContext(2,Math.ceil(sr*Math.max(1,end())/FPS),sr),M=mx();
+  for(const k of S.clips){if(k.fx!=null||k.tx||k.rv||!BL[k.mid]||MT(k)=='image')continue;const tk=k.tr=='A1'?'A1':k.tr=='A2'?'A2':'V';if(M.mu[tk]||(M.so&&M.so!=tk))continue;
+   let b;try{b=await oc.decodeAudioData(await BL[k.mid].arrayBuffer())}catch(e){continue}
+   const s=oc.createBufferSource(),p=oc.createStereoPanner(),g=oc.createGain(),t0=k.s/FPS;s.buffer=b;s.playbackRate.value=SP(k);p.pan.setValueAtTime(k.pan||0,0);
+   if(k.pk&&k.pk.length)k.pk.forEach(a=>p.pan[k.pg?'linearRampToValueAtTime':'setValueAtTime'](a.p,t0+a.f/FPS));
+   g.gain.value=(k.vol??1)*M[tk]*M.M;s.connect(p);p.connect(g);g.connect(oc.destination);s.start(t0,k.i/FPS,(k.d/FPS)*SP(k));s.stop((k.s+k.d)/FPS)}
+  return oc.startRendering()}
+ const cl=()=>$q('#xov').classList.remove('on');
+ exportVid=function(){if(!S.clips.length)return toast('Add a clip to the timeline first');
+  xov('<div class=xb><b>Export</b><button class=acc id=zxe1>Video + audio</button><p>Real-time. Most reliable.</p><button id=zxe2>Video + audio, fast (beta)</button><p>Can hang on some phones.</p><button id=zxe3>Audio only (WAV)</button><button id=zxe4>Cancel</button></div>');
+  $q('#zxe4').onclick=cl;
+  $q('#zxe1').onclick=async()=>{cl();const V=window.VideoEncoder;try{window.VideoEncoder=undefined}catch(e){}try{await _e()}finally{window.VideoEncoder=V}};
+  $q('#zxe2').onclick=()=>{cl();_e()};
+  $q('#zxe3').onclick=async()=>{cl();toast('Rendering audio...');stop();try{const b=wav(await mixd()),u=URL.createObjectURL(b),n=(S.name||'audio').split(' ').join('_')+'.wav';
+   xov('<div class=xb><b>Audio ready</b><audio src="'+u+'" controls style="width:100%"></audio><p>'+esc(n)+' \u00b7 '+(b.size/1e6).toFixed(1)+' MB</p><div class=hd><a class="btn acc" href="'+u+'" download="'+esc(n)+'">Save audio</a><button id=zxe5>Close</button></div></div>');$q('#zxe5').onclick=cl}catch(e){toast('Audio render failed')}}}});
 })();
 </script>
 <!--/ZXP-->
