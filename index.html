@@ -1832,10 +1832,24 @@ part('tx',()=>{const A=$q('#adj6');if(!A)return;
  new MutationObserver(fix).observe(A,{childList:true,subtree:true});fix()});
 })();</script>
 
+
+
+
 <style id="zp13css">
 #zhc,#zhi,#zov,#zmu8{display:none!important}
 html,body{background:#060a15!important}
-.bar{margin:0 10px calc(34px + env(safe-area-inset-bottom,0px))!important}
+.bar{margin:0 10px calc(14px + env(safe-area-inset-bottom,0px))!important;box-shadow:inset 0 1px 0 rgba(255,255,255,.1)!important;flex:none}
+#tl{flex:1 1 auto!important;height:auto!important;min-height:110px}
+#pv{height:var(--z14pv,31dvh)!important}
+@media (orientation:landscape) and (max-height:520px){#pv{height:52dvh!important}}
+html.z14tb0 .bar button{min-height:46px}
+html.z14tb0 .bar button svg{width:20px;height:20px}
+html.z14tb1 .bar button{min-height:56px;font-size:11px}
+html.z14tb1 .bar button svg{width:24px;height:24px}
+html.z14tb2 .bar button{min-height:64px;font-size:12px}
+html.z14tb2 .bar button svg{width:28px;height:28px}
+#bin:not(.on),#adj:not(.on),#adj3:not(.on),#adj4:not(.on),#adj5:not(.on),#adj6:not(.on),#adj7:not(.on),#imenu:not(.on),.zsh:not(.on){visibility:hidden;pointer-events:none;transition:transform .34s cubic-bezier(.22,1,.36,1),visibility 0s .34s!important}
+html.z14nb #bin,html.z14nb #adj,html.z14nb #adj3,html.z14nb #adj4,html.z14nb #adj5,html.z14nb #adj6,html.z14nb #adj7,html.z14nb #imenu,html.z14nb .zsh{-webkit-backdrop-filter:none!important;backdrop-filter:none!important}
 #bin,#adj,#adj3,#adj4,#adj5,#adj6,#adj7,#imenu,.zsh{left:10px!important;right:10px!important;bottom:calc(16px + env(safe-area-inset-bottom,0px))!important;max-height:58dvh!important;border-radius:28px!important;border:1px solid rgba(120,170,255,.24)!important;transform:translateY(140%);padding-bottom:18px}
 #zca:not(.on){display:none!important}
 #zca{display:none!important}
@@ -1955,6 +1969,31 @@ part('tools',()=>{const sub=$q('.sub'),grp=$q('.grp'),ex=[];
  document.querySelectorAll('.grp button span').forEach(s=>{if(s.textContent=='Look')s.textContent='Filters'});
  const a=$q('#ad span');if(a)a.textContent='Filters';
  const A=$q('#adj');new MutationObserver(()=>{const b=A.querySelector('.hd b');if(b&&/Looks/.test(b.textContent))b.textContent='Filters'}).observe(A,{childList:true})});
+
+/* ---- 8. layout settings, loop, export ratio and size ---- */
+const ZK='z14';
+const Z4=Object.assign({tb:1,pv:31,lp:0,ex:1,bl:1},(()=>{try{return JSON.parse(localStorage.getItem(ZK)||'{}')}catch(e){return{}}})());
+const z4s=()=>{try{localStorage.setItem(ZK,JSON.stringify(Z4))}catch(e){}};
+const z4a=()=>{const H=document.documentElement;H.style.setProperty('--z14pv',Z4.pv+'dvh');[0,1,2].forEach(i=>H.classList.toggle('z14tb'+i,Z4.tb==i));H.classList.toggle('z14nb',!Z4.bl)};
+z4a();
+part('z4set',()=>{const zs=$q('#zset');if(!zs)return;
+ const ch=(k,a)=>'<div class="ch">'+a.map(x=>'<button data-z4="'+k+'" data-v="'+x[1]+'"'+(Z4[k]==x[1]?' class="on"':'')+'>'+x[0]+'</button>').join('')+'</div>';
+ function sec(){if(!zs.classList.contains('on')||zs.querySelector('#z14s'))return;const d=document.createElement('div');d.id='z14s';
+  d.innerHTML='<div class="zh">Layout</div><div class="zc">Toolbar size</div>'+ch('tb',[['Compact',0],['Normal',1],['Large',2]])+'<div class="zc">Preview height</div>'+ch('pv',[['Small',26],['Normal',31],['Large',37],['XL',43]])+'<div class="zc">Glass blur on menus</div>'+ch('bl',[['On',1],['Off',0]])+'<div class="zh">Playback and export</div><div class="zc">Loop playback</div>'+ch('lp',[['Off',0],['On',1]])+'<div class="zc">Export size</div>'+ch('ex',[['720p',1],['1080p (upscaled)',1.5]])+'<p>Export follows the preview ratio, so Shorts exports as 9:16.</p>';
+  zs.appendChild(d);d.querySelectorAll('[data-z4]').forEach(b=>b.onclick=()=>{Z4[b.dataset.z4]=+b.dataset.v;z4s();z4a();d.remove();sec()})}
+ new MutationObserver(sec).observe(zs,{attributes:true,attributeFilter:['class'],childList:true})});
+part('loop',()=>{const _s=stop;stop=function(){const lp=Z4.lp&&playing&&!XR&&end()>0&&ph>=end();_s();if(lp){ph=0;R();setTimeout(()=>$q('#pp').click(),30)}}});
+part('export',()=>{const _cs=HTMLCanvasElement.prototype.captureStream;if(!_cs)return;
+ const ratio=()=>{let p={};try{p=JSON.parse(localStorage.getItem('zp5')||'{}')}catch(e){}const r=p.rt||'auto';if(r!=='auto'){const a=r.split(':');return a[0]/a[1]}
+  const V=S.clips.filter(k=>k.tr==='V1'||k.tr==='V2'),k=V.find(k=>ph>=k.s&&ph<k.s+k.d)||V[0],el=k&&E[k.mid],w=el&&(el.videoWidth||el.naturalWidth),h=el&&(el.videoHeight||el.naturalHeight);return w&&h?w/h:16/9};
+ HTMLCanvasElement.prototype.captureStream=function(f){if(this.id!=='cv')return _cs.call(this,f);
+  const r=ratio(),sc=Z4.ex||1;if(Math.abs(r-16/9)<.02&&sc==1)return _cs.call(this,f);
+  let W,H;if(r>=1){H=Math.round(720*sc);W=Math.round(H*r)}else{W=Math.round(720*sc);H=Math.round(W/r)}W&=~1;H&=~1;
+  let sw,sh,sx,sy;if(r<16/9){sh=720;sw=720*r;sx=(1280-sw)/2;sy=0}else{sw=1280;sh=1280/r;sx=0;sy=(720-sh)/2}
+  const o=document.createElement('canvas');o.width=W;o.height=H;const x=o.getContext('2d'),cv=this;let n=0;
+  const dr=()=>x.drawImage(cv,sx,sy,sw,sh,0,0,W,H);dr();
+  const iv=setInterval(()=>{dr();if(!XR&&++n>30)clearInterval(iv)},33);
+  return _cs.call(o,f)}});
 })();
 </script>
 </body></html>
