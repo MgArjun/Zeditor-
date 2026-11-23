@@ -3055,7 +3055,7 @@ let CK=[],EV=[],W={h:2.6,th:.2},OP={w:1,h:1},BR={c:'#e62117',r:22,e:0},dg=null,A
 const C={th:.7,ph:.5,r:12},ptr=new Map;
 const SKY={day:['#bcd7ff','#ffffff',.9],sunset:['#ff9a62','#ffc58a',1.05],night:['#070b1c','#8fa8ff',.5],studio:['#161a26','#ffffff',1.1]};
 const GR={grass:'#6b8f5e',floor:'#b08a5e',sand:'#d9c28f',snow:'#eef2f8',road:'#444a52'};
-const FCOL={table:'#a0764a',chair:'#c08a54',bed:'#4aa3ff',sofa:'#8a5aa8',tree:'#2fa84f',lamp:'#ffe08a'};
+const FCOL={clay:'#b8a58a',table:'#a0764a',chair:'#c08a54',bed:'#4aa3ff',sofa:'#8a5aa8',tree:'#2fa84f',lamp:'#ffe08a'};
 const SFX=['step','whoosh','door','knock','boing','pop','ding','crash'];
 const PEOPLE={Man:{sy:1.05},Woman:{cs:'#ff6fa5',cp:'#5a3d8a',ch:'#5a2a1a',sx:.9},Kid:{sc:.65,cs:'#ffd400',cp:'#2f9a5a'}};
 const MT=c=>new THREE.MeshStandardMaterial({color:c,roughness:.6});
@@ -3112,11 +3112,35 @@ function hum(g){const u=g.userData,T3=THREE,R={sa:[],el:[],hp:[],kn:[],ac:{belt:
  u.R=R;acc(g)}
 function acc(g){const u=g.userData;for(const n in u.R.ac)u.R.ac[n].forEach(m=>{m.visible=!!u.acc[n];m.material.color.set(u.ca[n])})}
 function recol(g){const u=g.userData;g.traverse(m=>{if(!m.isMesh)return;const p=m.userData.part;if(p||(m.userData.pt&&!m.userData.nc&&u.k!='human')){m.material.map=null;m.userData.cv=null;m.material.color.set(p?u[p]:u.col);m.material.needsUpdate=true}})}
-function bld(g){const u=g.userData,k=u.k;if(k=='wall')bw(g);else if(k=='floor')bf(g);else if(k=='roof')br(g);else if(k=='human')hum(g);else FB[k](g);if(k!='wall')recol(g)}
+function bld(g){const u=g.userData,k=u.k;if(k=='wall')bw(g);else if(k=='floor')bf(g);else if(k=='roof')br(g);else if(k=='human')hum(g);else if(k=='clay')cb(g);else FB[k](g);if(k!='wall')recol(g)}
+/* clay: sculpt from a raw block */
+const SC={m:'pull',r:.3,s:1,mir:0,cp:.5};
+const CS={block:()=>BX(1,1,1,36,36,36),slab:()=>BX(2,.3,1.2,48,10,32),stone:()=>new THREE.SphereGeometry(.5,64,48),log:()=>new THREE.CylinderGeometry(.35,.35,1.6,48,40),cone:()=>new THREE.ConeGeometry(.5,1,48,32),ring:()=>new THREE.TorusGeometry(.4,.14,32,64),plate:()=>new THREE.CylinderGeometry(.5,.5,.12,64,6)};
+function cb(g){const u=g.userData,geo=CS[u.shape||'block']();geo.userData.o=geo.attributes.position.array.slice();geo.computeBoundingBox();const m=ME(geo,u.col,0,-geo.boundingBox.min.y,0,g);m.material.side=THREE.DoubleSide}
+function saveClay(o){if(!o||o.userData.k!='clay')return;const u=o.userData,g=o.children[0].geometry;dbPut({id:'cl_'+u.cid,blob:new Blob([g.attributes.position.array.slice().buffer])});dbPut({id:'ci_'+u.cid,blob:new Blob([new Uint32Array(g.index.array).buffer])})}
+async function lc(g){const u=g.userData,a=await dbGet('cl_'+u.cid),b=await dbGet('ci_'+u.cid);if(!a)return;const m=g.children[0],p=m.geometry.attributes.position,arr=new Float32Array(await a.blob.arrayBuffer());if(arr.length==p.array.length){p.array.set(arr);p.needsUpdate=true}if(b)m.geometry.setIndex(Array.from(new Uint32Array(await b.blob.arrayBuffer())));m.geometry.computeVertexNormals()}
+function cpy(a,b){const ag=a.children[0].geometry,bg=b.children[0].geometry;bg.attributes.position.array.set(ag.attributes.position.array);bg.attributes.position.needsUpdate=true;bg.setIndex(Array.from(ag.index.array));bg.computeVertexNormals();saveClay(b)}
+function dab(m,p,n,r){const g=m.geometry,P=g.attributes.position.array,O=g.userData.o,md=SC.m;
+ if(md=='cut'){const ix=g.index.array,o=[];for(let i=0;i<ix.length;i+=3){const a=ix[i]*3,b=ix[i+1]*3,c=ix[i+2]*3,x=(P[a]+P[b]+P[c])/3-p.x,y=(P[a+1]+P[b+1]+P[c+1])/3-p.y,z=(P[a+2]+P[b+2]+P[c+2])/3-p.z;if(x*x+y*y+z*z>r*r)o.push(ix[i],ix[i+1],ix[i+2])}g.setIndex(o);return}
+ const k=SC.s*r*.12,id=[];let cx=0,cy=0,cz=0,sw=0;
+ for(let i=0;i<P.length;i+=3){const d=Math.hypot(P[i]-p.x,P[i+1]-p.y,P[i+2]-p.z);if(d>=r)continue;const w=(1-d/r)**2;id.push(i,w);if(md=='smooth'){cx+=P[i]*w;cy+=P[i+1]*w;cz+=P[i+2]*w;sw+=w}}
+ for(let j=0;j<id.length;j+=2){const i=id[j],w=id[j+1];let s=0;
+  if(md=='pull'||md=='push')s=(md=='pull'?1:-1)*k*w;
+  else if(md=='flatten')s=-((P[i]-p.x)*n.x+(P[i+1]-p.y)*n.y+(P[i+2]-p.z)*n.z)*w*.5;
+  else if(md=='smooth')s=((cx/sw-P[i])*n.x+(cy/sw-P[i+1])*n.y+(cz/sw-P[i+2])*n.z)*w*.4;
+  else if(md=='restore'){for(let q=0;q<3;q++)P[i+q]+=(O[i+q]-P[i+q])*w*.3;continue}
+  P[i]+=n.x*s;P[i+1]+=n.y*s;P[i+2]+=n.z*s}}
+function sculpt(e){const o=sel;if(!o||o.userData.k!='clay')return;const m=o.children[0];ray(e);const h=rc.intersectObject(m)[0];if(!h||!h.face)return;
+ m.updateMatrixWorld();const lp=m.worldToLocal(h.point.clone()),n=h.face.normal.clone(),r=SC.r/((o.scale.x+o.scale.y+o.scale.z)/3||1);
+ dab(m,lp,n,r);if(SC.mir){lp.x=-lp.x;n.x=-n.x;dab(m,lp,n,r)}
+ const g=m.geometry;g.attributes.position.needsUpdate=true;g.computeVertexNormals();g.computeBoundingSphere()}
+function slice(ax,sg){const o=sel;if(!o||o.userData.k!='clay')return;const g=o.children[0].geometry;g.computeBoundingBox();const mn=g.boundingBox.min[ax],mx=g.boundingBox.max[ax],pl=mn+(mx-mn)*SC.cp,P=g.attributes.position.array,ix=g.index.array,q='xyz'.indexOf(ax),out=[];
+ for(let i=0;i<ix.length;i+=3){const c=(P[ix[i]*3+q]+P[ix[i+1]*3+q]+P[ix[i+2]*3+q])/3;if(sg>0?c<pl:c>pl)out.push(ix[i],ix[i+1],ix[i+2])}
+ g.setIndex(out);saveClay(o)}
 function mk(k,sp){sp=sp||{};const g=new THREE.Group(),u=g.userData;u.k=k;
  const D={wall:{len:3,h:W.h,th:W.th,holes:[],col:'#e8dcc8'},floor:{w:4,d:4,col:'#b08a5e'},roof:{w:4,d:4,h:1.4,col:'#b5483a'},human:{cs:'#4aa3ff',cp:'#2b3a67',ck:'#f1c9a5',ch:'#2a1a10',acc:{belt:1,watch:1},ca:{belt:'#5a3a1a',watch:'#c8c8c8',hat:'#222222',glass:'#111111',tie:'#c8283f'}}}[k]||{col:FCOL[k]};
- Object.assign(u,{sc:1,sx:1,sy:1,fy:0,act:'',kf:[]},D,JSON.parse(JSON.stringify(sp)));bld(g);const n=ob.length;
- g.position.set(sp.x!=null?sp.x:((n+1)>>1)*(n%2?1.8:-1.8),sp.y||0,sp.z||0);g.rotation.y=sp.ry!=null?sp.ry:(u.fy||0);scn.add(g);ob.push(g);return g}
+ Object.assign(u,{sc:1,sx:1,sy:1,fy:0,act:'',kf:[]},D,JSON.parse(JSON.stringify(sp)));if(k=='clay'&&!u.cid)u.cid=Date.now().toString(36)+Math.random().toString(36).slice(2,6);bld(g);const n=ob.length;
+ g.position.set(sp.x!=null?sp.x:((n+1)>>1)*(n%2?1.8:-1.8),sp.y||0,sp.z||0);g.rotation.y=sp.ry!=null?sp.ry:(u.fy||0);scn.add(g);ob.push(g);if(k=='clay'&&sp.cid)lc(g);return g}
 const FIX=g=>/^(wall|floor|roof)$/.test(g.userData.k);
 function rm(o){scn.remove(o);ob.splice(ob.indexOf(o),1);if(sel===o)sel=null}
 
@@ -3130,7 +3154,7 @@ function ev(g,t,dt){const u=g.userData,K=u.kf;let am=0,cum=0,sp=0;
   g.position.set(L(a.x,b.x),L(a.y,b.y),L(a.z,b.z));u.sc=L(a.s,b.s);u.act=a.act;
   if(u.R&&sp>.05){const t2=Math.atan2(dx,dz);u.fy=pl?u.fy+ang(t2-u.fy)*Math.min(1,dt*8):t2}else u.fy=a.ry+ang(b.ry-a.ry)*f}
  else u.base=snap(g,0);
- g.rotation.y=u.fy;g.rotation.z=u.k=='tree'?Math.sin(t*2.2+g.position.x)*.05*wind:0;g.scale.set(u.sc*u.sx,u.sc*u.sy,u.sc*u.sx);
+ g.rotation.x=u.rx||0;g.rotation.y=u.fy;g.rotation.z=u.k=='tree'?Math.sin(t*2.2+g.position.x)*.05*wind:(u.rz||0);g.scale.set(u.sc*u.sx,u.sc*u.sy,u.sc*(u.sz||u.sx));
  if(u.R){if(sp>.05)am=Math.min(1.3,sp/1.3);const ph=cum*4.2;pose(g,am,ph,t);const n=Math.floor(ph/Math.PI);if(pl&&am>.1&&n!=u.ls&&foot)snd('step');u.ls=n}}
 function pose(g,am,ph,t){const u=g.userData,R=u.R,a=u.act,ds=Math.sin(t*6),s=Math.sin(ph),c=Math.cos(ph);let sa=[0,0],sz=[0,0],el=[0,0],hp=[0,0],kn=[0,0],bob=Math.abs(s)*.05*am,tl=0,dy=0;
  if(a=='wave'){sa[1]=2.6;sz[1]=.3;el[1]=.9+Math.sin(t*9)*.45}
@@ -3179,7 +3203,7 @@ function addHole(e){ray(e);const ms=[];ob.forEach(g=>{if(g.userData.k=='wall')g.
 function bbox(){let a=1e9,b=-1e9,c=1e9,d=-1e9,n=0;ob.forEach(g=>{if(g.userData.k!='wall')return;g.updateMatrixWorld();[[0,0,0],[g.userData.len,0,0]].forEach(q=>{const p=g.localToWorld(new THREE.Vector3(...q));a=Math.min(a,p.x);b=Math.max(b,p.x);c=Math.min(c,p.z);d=Math.max(d,p.z);n++})});return n?{x0:a,x1:b,z0:c,z1:d}:null}
 
 /* ---------- save ---------- */
-const ser=g=>{const u=g.userData,o={};['k','len','h','th','holes','w','d','col','cs','cp','ck','ch','acc','ca','sc','sx','sy','fy','kf','act'].forEach(p=>{if(u[p]!==undefined)o[p]=u[p]});o.x=g.position.x;o.y=g.position.y;o.z=g.position.z;o.ry=g.rotation.y;return JSON.parse(JSON.stringify(o))};
+const ser=g=>{const u=g.userData,o={};['k','len','h','th','holes','w','d','col','cs','cp','ck','ch','acc','ca','sc','sx','sy','sz','rx','rz','shape','cid','fy','kf','act'].forEach(p=>{if(u[p]!==undefined)o[p]=u[p]});o.x=g.position.x;o.y=g.position.y;o.z=g.position.z;o.ry=g.rotation.y;return JSON.parse(JSON.stringify(o))};
 function sv(){clearTimeout(svt);svt=setTimeout(()=>{try{localStorage.setItem('z3x',JSON.stringify({ob:ob.map(ser),CK,EV,dur,skn,gn,wind}))}catch(e){}},600)}
 function skyset(v){skn=v;const L=SKY[v];scn.background=new THREE.Color(L[0]);scn.fog.color.set(L[0]);dl.color.set(L[1]);dl.intensity=L[2];hl.intensity=v=='night'?.4:.9}
 function gset(v){gn=v;gm.material.color.set(GR[v])}
@@ -3194,7 +3218,7 @@ function selc(){const g=sel;if(!g)return '<p>Tap an object to select it.</p>';co
  if(!h)s+=CLR('Colour','col',u.col);
  if(!FIX(g)||u.k=='roof'){s+=RG('Size','sc',.2,4,.02,u.sc)}
  if(!FIX(g))s+=RG('Turn','fy',-3.14,3.14,.02,u.fy)+RG('Up','py',0,6,.05,g.position.y);
- if(h)s+=RG('Height','sy',.6,1.6,.01,u.sy)+RG('Width','sx',.6,1.6,.01,u.sx);
+ if(h)s+=RG('Height','sy',.6,1.6,.01,u.sy)+RG('Width','sx',.6,1.6,.01,u.sx);if(u.k=='clay')s+=RG('Length X','sx',.1,4,.02,u.sx)+RG('Height Y','sy',.1,4,.02,u.sy)+RG('Depth Z','sz',.1,4,.02,u.sz||u.sx)+RG('Tilt forward','rx',-3.14,3.14,.02,u.rx||0)+RG('Tilt side','rz',-3.14,3.14,.02,u.rz||0);
  if(u.k=='wall')s+=RG('Wall height','wh',1.5,5,.1,u.h)+B('Remove last opening','hole',0);
  if(u.k=='roof')s+=RG('Roof height','rh',.4,3,.05,u.h);
  return s+'<div class=ch>'+B('Duplicate','dup',0)+B('Delete','del',0)+'</div>'}
@@ -3205,6 +3229,10 @@ function pn(){const g=sel,u=g&&g.userData,hu=u&&u.k=='human';let h='';
   +'<div class=zh>House view</div><div class=ch>'+B('Add roof','roof',0)+B(roofOn?'Hide roof':'Show roof','roofv',0)+B('Inside view','in',0,inside)+B('Outside view','out',0,!inside)+B('Top view','top',0)+'</div>'
   +'<div class=zh>Add</div><div class=ch>'+['table','chair','bed','sofa','tree','lamp'].map(x=>B(x,'af',x)).join('')+Object.keys(PEOPLE).map(x=>B(x,'ah',x)).join('')+'</div>'
   +'<div class=zh>Your sketch</div><div class=ch>'+B('Import sketch image','sk',0)+(ref?B('Remove','skr',0):'')+'</div>'+(ref?RG('Sketch size','rss',2,40,.5,ref.m.scale.x)+RG('Sketch visibility','rso',.1,1,.05,ref.m.material.opacity):'<p>Use Top view, import your house sketch, then trace it with Wall tool.</p>')+selc()}
+ else if(tab=='clay'){const cy=u&&u.k=='clay';
+  h+='<p>Pick a raw material. Drag on it to shape it, drag empty space to turn the camera. Add several pieces and stretch, tilt and place them to build something like a bike.</p><div class=zh>Start with</div><div class=ch>'+Object.keys(CS).map(x=>B(x,'cn',x)).join('')+'</div>';
+  if(cy)h+='<div class=zh>Tool</div><div class=ch>'+[['Pull out','pull'],['Push in','push'],['Flatten','flatten'],['Smooth','smooth'],['Restore','restore'],['Carve away','cut']].map(a=>B(a[0],'sm',a[1],SC.m==a[1])).join('')+B('Mirror '+(SC.mir?'on':'off'),'tm',0,SC.mir)+B('Focus','foc',0)+'</div>'+RG('Brush size','csr',.05,1,.01,SC.r)+RG('Strength','css',.2,3,.05,SC.s)+'<div class=zh>Saw a slice off</div>'+RG('Cut position','cpos',.05,.95,.01,SC.cp)+'<div class=ch>'+[['Top','y,1'],['Bottom','y,-1'],['Right','x,1'],['Left','x,-1'],['Front','z,1'],['Back','z,-1']].map(a=>B(a[0],'slc',a[1])).join('')+'</div>';
+  h+=selc()}
  else if(tab=='paint'){
   h+='<p>Drag on the selected object to paint. Works on people, clothes and furniture.</p><div class=zh>Brush</div>'+SWT('bcol',PAL)+CLR('Colour','bc',BR.c)+RG('Brush size','br',4,70,1,BR.r)+'<div class=ch>'+B('Paint','er',0,!BR.e)+B('Eraser','er',1,BR.e)+B('Clear paint','pclr',0)+'</div>';
   if(hu)h+='<div class=zh>Character</div>'+SWT('skin',['#f6d5b8','#e0ac86','#c68a5e','#8d5a3b','#5a3a26'])+CLR('Shirt','cs',u.cs)+CLR('Pants','cp',u.cp)+CLR('Hair','ch',u.ch)+'<div class=zh>Accessories</div><div class=ch>'+[['Belt','belt'],['Watch','watch'],['Hat','hat'],['Glasses','glass'],['Tie','tie']].map(a=>B(a[0],'tac',a[1],u.acc[a[1]])).join('')+'</div>'+['belt','watch','hat','glass','tie'].map(n=>CLR(n+' colour','ac_'+n,u.ca[n])).join('')+RG('Height','sy',.6,1.6,.01,u.sy)+RG('Width','sx',.6,1.6,.01,u.sx);
@@ -3222,17 +3250,19 @@ function ticks(){const e=Q('#zdk');if(!e)return;const K=sel?sel.userData.kf:[];e
 function ui(){Q('#zdn').innerHTML=pn();Q('#zdtb').querySelectorAll('button').forEach(b=>b.classList.toggle('on',b.dataset.t==tab));ticks()}
 function SET(k,v){
  if(k=='wh0'){W.h=v;return}if(k=='wt'){W.th=v;return}if(k=='ow'){OP.w=v;return}if(k=='oh'){OP.h=v;return}if(k=='wind'){wind=v;sv();return}
- if(k=='bc'){BR.c=v;return}if(k=='br'){BR.r=v;return}
+ if(k=='csr'){SC.r=v;return}if(k=='css'){SC.s=v;return}if(k=='cpos'){SC.cp=v;return}if(k=='bc'){BR.c=v;return}if(k=='br'){BR.r=v;return}
  if(k=='rss'){if(ref)ref.m.scale.set(v,v/ref.ar,1);return}if(k=='rso'){if(ref)ref.m.material.opacity=v;return}
  const g=sel;if(!g)return;const u=g.userData;
  if(k=='col'){u.col=v;if(u.k=='wall')bw(g);else recol(g)}
  else if(k=='cs'||k=='cp'||k=='ch'||k=='ck'){u[k]=v;recol(g)}
  else if(k.slice(0,3)=='ac_'){u.ca[k.slice(3)]=v;acc(g)}
  else if(k=='wh'){u.h=v;bw(g)}else if(k=='rh'){u.h=v;br(g)}
- else if(k=='sc'){u.sc=v;if(u.k=='roof')g.scale.setScalar(v)}else if(k=='fy'){u.fy=v;g.rotation.y=v}else if(k=='py')g.position.y=v;else if(k=='sx')u.sx=v;else if(k=='sy')u.sy=v;else return;
+ else if(k=='sc'){u.sc=v;if(u.k=='roof')g.scale.setScalar(v)}else if(k=='fy'){u.fy=v;g.rotation.y=v}else if(k=='py')g.position.y=v;else if(k=='sx')u.sx=v;else if(k=='sy')u.sy=v;else if(k=='sz')u.sz=v;else if(k=='rx'){u.rx=v;g.rotation.x=v}else if(k=='rz'){u.rz=v;g.rotation.z=v}else return;
  if(!FIX(g)&&k!='col'&&!/^(cs|cp|ch|ck|ac_)/.test(k)&&u.kf.length)key(g,T);sv()}
 const AC={
  tool:v=>{tool=v;ui()},
+ cn:k=>{sel=mk('clay',{shape:k});tab='clay';AC.foc();ui();sv()},sm:v=>{SC.m=v;ui()},tm:()=>{SC.mir=!SC.mir;ui()},
+ slc:v=>{const a=v.split(',');slice(a[0],+a[1])},foc:()=>{if(sel){tg.set(sel.position.x,sel.position.y+.6,sel.position.z);inside=0;C.r=4}},
  af:k=>{sel=mk(k);ui();sv()},ah:n=>{sel=mk('human',PEOPLE[n]);ui();sv()},
  roof:()=>{const b=bbox();if(!b)return toast('Draw walls first');const hh=Math.max(...ob.filter(o=>o.userData.k=='wall').map(o=>o.userData.h));sel=mk('roof',{x:(b.x0+b.x1)/2,z:(b.z0+b.z1)/2,y:hh,w:b.x1-b.x0,d:b.z1-b.z0});ui();sv()},
  roofv:()=>{roofOn=!roofOn;ui()},
@@ -3256,7 +3286,7 @@ const AC={
  sky:v=>{skyset(v);ui();sv()},gnd:v=>{gset(v);ui();sv()},grid:()=>{gd.visible=!gd.visible;ui()},
  dur:v=>{dur=+v;T=Math.min(T,dur);ui();sv()},rt:v=>{R3=+v;rs();ui()},
  new:()=>{if(!confirm('Remove everything in this 3D scene?'))return;ob.slice().forEach(rm);CK=[];EV=[];sel=null;sv();ui()},
- dup:()=>{if(!sel)return;const s=ser(sel);s.x+=1.5;s.kf.forEach(k=>k.x+=1.5);sel=mk(s.k,s);ui();sv()},
+ dup:()=>{if(!sel)return;const s=ser(sel),src=sel;delete s.cid;s.x+=1.5;s.kf.forEach(k=>k.x+=1.5);sel=mk(s.k,s);if(s.k=='clay')cpy(src,sel);ui();sv()},
  del:()=>{if(sel){rm(sel);ui();sv()}}};
 
 /* ---------- record ---------- */
@@ -3271,7 +3301,7 @@ async function toTl(){if(rcd)return;au();const mt=['video/mp4;codecs=avc1.42E01E
 function rs(){const s=Q('#zds'),W2=R3>=1?1280:Math.round(1280*R3),H2=R3>=1?Math.round(1280/R3):1280,w=Math.min(s.clientWidth,s.clientHeight*R3);rn.setSize(W2,H2,false);cam.aspect=R3;cam.updateProjectionMatrix();cv.style.width=w+'px';cv.style.height=(w/R3)+'px'}
 const loadT=()=>window.THREE?Promise.resolve():new Promise((a,b)=>{const s=document.createElement('script');s.src='https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js';s.onload=a;s.onerror=b;document.head.appendChild(s)});
 async function open(){
- if(!ov){ov=document.createElement('div');ov.id='zdx';ov.innerHTML='<div class=tb><button id=zdb>Back</button><button id=zdp class=acc>Play</button><button id=zda>Add to timeline</button></div><div id=zds><canvas></canvas></div><div class=zdt><input type=range id=zdr min=0 max=1000 value=0><span id=zdm>0:00 / 0:30</span><button id=zdkb>Key</button></div><div id=zdk></div><div class=ch id=zdtb><button data-t=build>Build</button><button data-t=paint>Paint</button><button data-t=anim>Animate</button><button data-t=scene>Scene</button></div><div id=zdn></div><input type=file id=zdf accept="image/*" hidden>';document.body.appendChild(ov);cv=ov.querySelector('canvas')}
+ if(!ov){ov=document.createElement('div');ov.id='zdx';ov.innerHTML='<div class=tb><button id=zdb>Back</button><button id=zdp class=acc>Play</button><button id=zda>Add to timeline</button></div><div id=zds><canvas></canvas></div><div class=zdt><input type=range id=zdr min=0 max=1000 value=0><span id=zdm>0:00 / 0:30</span><button id=zdkb>Key</button></div><div id=zdk></div><div class=ch id=zdtb><button data-t=build>Build</button><button data-t=clay>Clay</button><button data-t=paint>Paint</button><button data-t=anim>Animate</button><button data-t=scene>Scene</button></div><div id=zdn></div><input type=file id=zdf accept="image/*" hidden>';document.body.appendChild(ov);cv=ov.querySelector('canvas')}
  ov.classList.add('on');try{await loadT()}catch(e){}if(!window.THREE){toast('3D needs internet once to load');ov.classList.remove('on');return}
  if(!ini){ini=1;tg=new THREE.Vector3(0,1,0);sld=Q('#zdr');
   rn=new THREE.WebGLRenderer({canvas:cv,antialias:true,preserveDrawingBuffer:true});rn.setPixelRatio(1);rn.shadowMap.enabled=true;scn=new THREE.Scene();scn.fog=new THREE.Fog('#bcd7ff',40,110);cam=new THREE.PerspectiveCamera(48,R3,.1,300);rc=new THREE.Raycaster();
@@ -3292,7 +3322,8 @@ async function open(){
    if(tab=='build'&&(tool=='wall'||tool=='floor')){const p=gnd(e);if(p)dg={t:tool,a:[sn(p.x),sn(p.z)],x:e.clientX,y:e.clientY,m:0};return}
    const h=pick(e);dg={x:e.clientX,y:e.clientY,m:0,h,lp:null};
    if(tab=='paint'&&sel&&h===sel){dg.p=1;paintAt(e);return}
-   if(h&&tab!='paint'&&tool=='move'){if(sel!==h){sel=h;ui()}const q=gnd(e);dg.off=q?[h.position.x-q.x,h.position.z-q.z]:[0,0]}};
+   if(tab=='clay'&&sel&&sel.userData.k=='clay'&&h===sel){dg.s=1;sculpt(e);return}
+   if(h&&tab!='paint'&&tab!='clay'&&tool=='move'){if(sel!==h){sel=h;ui()}const q=gnd(e);dg.off=q?[h.position.x-q.x,h.position.z-q.z]:[0,0]}};
   cv.onpointermove=e=>{const p=ptr.get(e.pointerId);if(!p)return;
    if(ptr.size==2){const a=[...ptr.values()],d0=Math.hypot(a[0][0]-a[1][0],a[0][1]-a[1][1]);ptr.set(e.pointerId,[e.clientX,e.clientY]);const b=[...ptr.values()],d1=Math.hypot(b[0][0]-b[1][0],b[0][1]-b[1][1]);
     if(inside){const s=(d1-d0)*.02;tg.x+=Math.sin(C.th)*s;tg.z+=Math.cos(C.th)*s}else C.r=cl(C.r*d0/(d1||1),2.5,80);return}
@@ -3302,20 +3333,24 @@ async function open(){
     if(!dg.o)dg.o=dg.t=='wall'?mk('wall',{x:a[0],z:a[1],len:.1}):mk('floor',{x:a[0],z:a[1],w:.1,d:.1});const o=dg.o,u=o.userData;
     if(dg.t=='wall'){u.len=Math.max(.1,Math.hypot(b[0]-a[0],b[1]-a[1]));o.rotation.y=-Math.atan2(b[1]-a[1],b[0]-a[0]);bw(o)}
     else{u.w=Math.max(.1,Math.abs(b[0]-a[0]));u.d=Math.max(.1,Math.abs(b[1]-a[1]));o.position.set((a[0]+b[0])/2,0,(a[1]+b[1])/2);bf(o)}return}
-   if(dg.p){paintAt(e);return}
+   if(dg.p){paintAt(e);return}if(dg.s){sculpt(e);return}
    if(!dg.m)return;
    if(dg.off&&dg.h){const q=gnd(e);if(q){dg.h.position.x=sn(q.x+dg.off[0]);dg.h.position.z=sn(q.z+dg.off[1])}}
    else{C.th-=dx*.01;C.ph=cl(C.ph+dy*.01,-1.2,1.45)}};
   cv.onpointerup=cv.onpointercancel=e=>{ptr.delete(e.pointerId);const d=dg;dg=null;if(!d)return;
    if(d.o){const u=d.o.userData;if((d.t=='wall'&&u.len<.3)||(d.t=='floor'&&(u.w<.3||u.d<.3)))rm(d.o);else{sel=d.o;sv()}ui();return}
+   if(d.s){saveClay(sel);return}
    if(d.m){if(d.off&&d.h){if(!FIX(d.h)&&d.h.userData.kf.length)key(d.h,T);sv()}return}
    if(e.type!='pointerup')return;
    if(tab=='build'&&(tool=='door'||tool=='window'))addHole(e);
-   else if(!d.h&&!d.t){sel=null;ui()}else if(d.h&&tab=='paint'&&d.h!==sel){sel=d.h;ui()}};
+   else if(!d.h&&!d.t){sel=null;ui()}else if(d.h&&(tab=='paint'||tab=='clay')&&d.h!==sel){sel=d.h;ui()}};
   cv.onwheel=e=>{e.preventDefault();C.r=cl(C.r*(e.deltaY>0?1.1:.9),2.5,80)};
   addEventListener('resize',()=>{if(ov.classList.contains('on'))rs()})}
  rs();ui();if(!raf){last=performance.now();raf=requestAnimationFrame(frame)}}
 window.zq3=open;
+/* faster export: lets the fast exporter run about 4x real-time instead of waiting for the screen refresh */
+(()=>{const w=window.zxFast;if(!w||w.z)return;const oraf=window.requestAnimationFrame.bind(window);
+ const f=async function(){const tk=tick;window.requestAnimationFrame=cb=>cb===tk?oraf(cb):setTimeout(()=>cb(performance.now()),8);try{return await w.apply(this,arguments)}finally{window.requestAnimationFrame=oraf}};f.z=1;window.zxFast=f})();
 })();
 </script>
 <!--/Z3X-->
